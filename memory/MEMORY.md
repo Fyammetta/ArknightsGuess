@@ -1,0 +1,2 @@
+- [Operators.json 数据填充流程](operators-json-workflow.md) — JSON结构、Texture路径规则、数据来源、编码规范、后续六星干员批量填充
+- [立绘 Graybg 背景填充处理](graybg-image-processor.md) — 透明立绘→8×8网格灰调渐变背景，2048×2048输出，Node.js+sharp实现

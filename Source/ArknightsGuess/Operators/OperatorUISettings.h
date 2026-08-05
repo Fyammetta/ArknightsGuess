@@ -4,24 +4,45 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+#include "OperatorTypes.h"
 #include "OperatorUISettings.generated.h"
 
 /**
- *
+ * Project-wide configuration for the operator guessing game.
+ * Edit in Project Settings → Game → Operator UI.
  */
 UCLASS(config=Game, DefaultConfig, DisplayName="Operator UI")
 class ARKNIGHTSGUESS_API UOperatorUISettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
+
 public:
 	static UOperatorUISettings* Get()
 	{
 		return GetMutableDefault<UOperatorUISettings>();
 	}
-	
-	UPROPERTY(config, EditAnywhere)
+
+	// ---- Datas ----
+	UPROPERTY(config, EditAnywhere, Category = "Datas")
 	TMap<FName, TSoftObjectPtr<UMaterial>> Materials;
 
-	UPROPERTY(config, EditAnywhere)
+	UPROPERTY(config, EditAnywhere, Category = "Datas")
+	TArray<FOperatorData> OperatorList;
+
+	// ---- Operator Sample ----
+	UPROPERTY(config, EditAnywhere, Category = "Operator Sample")
 	TSoftObjectPtr<UTexture2D> SampleTex;
+
+	// ---- Gameplay Rules ----
+	UPROPERTY(config, EditAnywhere, Category = "Gameplay Rules", meta = (ClampMin = "0"))
+	int32 DefaultLevel = 36;
+
+	UPROPERTY(config, EditAnywhere, Category = "Gameplay Rules", meta = (ClampMin = "0"))
+	int32 MaxGuessCount = 10;
+
+	UPROPERTY(config, EditAnywhere, Category = "Gameplay Rules", meta = (ClampMin = "0"))
+	int32 ShuffleLimit = 20;
+
+	UPROPERTY(config, EditAnywhere, Category = "Gameplay Rules", meta = (ClampMin = "0"))
+	int32 HintFrequency = 2;
 };

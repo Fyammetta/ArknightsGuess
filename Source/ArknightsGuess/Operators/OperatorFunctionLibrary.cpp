@@ -5,7 +5,7 @@
 #include "OperatorSubsystem.h"
 #include "Engine/GameInstance.h"
 
-UOperatorSubsystem* UOperatorFunctionLibrary::GetUOperatorSubsystem(UObject* WorldContextObject)
+UOperatorSubsystem* UOperatorFunctionLibrary::GetOperatorSubsystem(UObject* WorldContextObject)
 {
 	if (const UWorld* World = WorldContextObject->GetWorld())
 	{

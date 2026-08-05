@@ -22,7 +22,7 @@ class ARKNIGHTSGUESS_API UOperatorImgUnit : public UUserWidget
 	UImage* Image;
 	
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	UWrapBox* Prompt;
+	UWrapBox* HintBox;
 	
 public:
 	void SetupUnit(const FOperatorData& Data);

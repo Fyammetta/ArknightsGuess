@@ -10,7 +10,7 @@
 
 void UOperatorImgUnit::SetupUnit(const FOperatorData& Data)
 {
-	auto Subsystem = UOperatorFunctionLibrary::GetUOperatorSubsystem(this);
+	auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
 	if (!Subsystem) return;
 	Image->SetBrushFromMaterial(Subsystem->GetDynamicMaterial(Data));
 }

@@ -16,7 +16,7 @@ class ARKNIGHTSGUESS_API UOperatorFunctionLibrary : public UBlueprintFunctionLib
 	GENERATED_BODY()
 public:
 	UFUNCTION(BlueprintCallable, meta = (WorldContext = "WorldContextObject"), Category = "OperatorFunctionLibrary|Subsystem")
-	static UOperatorSubsystem* GetUOperatorSubsystem(UObject* WorldContextObject);
+	static UOperatorSubsystem* GetOperatorSubsystem(UObject* WorldContextObject);
 	
 	
 };

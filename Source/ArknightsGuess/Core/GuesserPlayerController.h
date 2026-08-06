@@ -13,7 +13,8 @@ UCLASS()
 class ARKNIGHTSGUESS_API AGuesserPlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
+protected:
+	virtual void BeginPlay() override;
 public:
 	UFUNCTION(Reliable, NetMulticast, BlueprintCallable)
 	void StartGame(const FName& Mode);

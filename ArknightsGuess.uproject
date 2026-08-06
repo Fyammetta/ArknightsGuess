@@ -5,12 +5,19 @@
 	"Description": "",
 	"Modules": [
 		{
+			"Name": "DevNotification",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "ArknightsGuess",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"Engine",
-				"UMG"
+				"UMG",
+				"CoreUObject",
+				"DevNotification"
 			]
 		}
 	],

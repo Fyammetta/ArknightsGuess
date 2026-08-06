@@ -27,7 +27,7 @@ public:
 	TMap<FName, TSoftObjectPtr<UMaterial>> Materials;
 
 	UPROPERTY(config, EditAnywhere, Category = "Datas")
-	TArray<FOperatorData> OperatorList;
+	TSoftObjectPtr<UDataTable> OperatorDatas;
 
 	// ---- Operator Sample ----
 	UPROPERTY(config, EditAnywhere, Category = "Operator Sample")

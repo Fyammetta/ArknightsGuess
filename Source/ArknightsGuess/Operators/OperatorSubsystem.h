@@ -23,8 +23,12 @@ class ARKNIGHTSGUESS_API UOperatorSubsystem : public UGameInstanceSubsystem
 	UPROPERTY()
 	TObjectPtr<UMaterial> MaterialBase;
 
+	UPROPERTY()
+	TObjectPtr<UDataTable> OperatorDataTable;
+
 	TArray<FOperatorData> SpareOperators;
 	TArray<FOperatorData> UsedOperators;
+	TSet<FName> OperatorNames;
 
 	FName GuessMode;
 	int32 DefaultLevel;
@@ -88,4 +92,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	bool IsRunningOnServer() const;
+
+private:
+	UDataTable* GetCachedDataTable();
 };

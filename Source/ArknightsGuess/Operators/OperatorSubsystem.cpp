@@ -5,6 +5,18 @@
 #include "OperatorUISettings.h"
 #include "ArknightsGuess/Core/GuessGameStateBase.h"
 
+UDataTable* UOperatorSubsystem::GetCachedDataTable()
+{
+	if (!OperatorDataTable)
+	{
+		if (auto* Settings = UOperatorUISettings::Get())
+		{
+			OperatorDataTable = Settings->OperatorDatas.LoadSynchronous();
+		}
+	}
+	return OperatorDataTable.Get();
+}
+
 void UOperatorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -13,13 +25,15 @@ void UOperatorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	SpareOperators.Empty();
 	IsGameRunning = false;
 
-	if (auto* Settings = UOperatorUISettings::Get())
+	if (auto Settings = UOperatorUISettings::Get())
 	{
 		ShuffleLimit = Settings->ShuffleLimit;
 		MaxGuessCount = Settings->MaxGuessCount;
 		HintFrequency = Settings->HintFrequency;
 		SetDefaultLevel(Settings->DefaultLevel);
 	}
+	
+	StartUp(FName("Mosaic"));
 }
 
 void UOperatorSubsystem::Deinitialize()
@@ -32,12 +46,18 @@ void UOperatorSubsystem::StartUp(const FName& Mode)
 {
 	if (IsGameRunning) return;
 
-	if (IsRunningOnServer())
+	if (UDataTable* DataTable = GetCachedDataTable())
 	{
-		if (auto* Settings = UOperatorUISettings::Get())
+		if (IsRunningOnServer())
 		{
-			SpareOperators = Settings->OperatorList;
+			SpareOperators.Empty();
+			DataTable->ForeachRow<FOperatorDataRow>(TEXT("OperatorSubsystem::StartUp"),
+				[&List = SpareOperators](const FName& RowName, const FOperatorDataRow& Row)
+				{
+					List.Append(FOperatorData::MakeFromDataRow(RowName, Row));
+				});
 		}
+		OperatorNames.Append(DataTable->GetRowNames());
 	}
 
 	GuessMode = Mode;
@@ -56,17 +76,7 @@ void UOperatorSubsystem::EndGame()
 
 TSet<FName> UOperatorSubsystem::GetAllOperatorNames() const
 {
-	TSet<FName> Names;
-
-	if (auto* Settings = UOperatorUISettings::Get())
-	{
-		for (const FOperatorData& Op : Settings->OperatorList)
-		{
-			Names.Add(Op.Name);
-		}
-	}
-
-	return Names;
+	return OperatorNames;
 }
 
 UMaterialInstanceDynamic* UOperatorSubsystem::GetDynamicMaterial(const FOperatorData& Data)

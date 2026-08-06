@@ -6,6 +6,7 @@
 #include "GuessGameModeBase.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 
 
 void AGuesserPlayerController::StartGame_Implementation(const FName& Mode)
@@ -30,4 +31,11 @@ void AGuesserPlayerController::ConfirmAnswer_Implementation(const FName& Answer)
 	if (!GameMode) return;
 	
 	GameMode->ProcessGuess(Answer);
+}
+
+void AGuesserPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+	UWidgetBlueprintLibrary::SetInputMode_UIOnlyEx(this);
+	SetShowMouseCursor(true);
 }

@@ -13,6 +13,7 @@ class UTextBlock;
 class UImage;
 class UBorder;
 class UWidgetAnimation;
+class UComboBoxString;
 
 /**
  * Main menu / settings UI for the operator guessing game.
@@ -25,6 +26,7 @@ class ARKNIGHTSGUESS_API UGameMainUI : public UUserWidget
 	GENERATED_BODY()
 
 protected:
+
 	// ---- Play mode buttons ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UButton> SoloPlayButton;
@@ -68,14 +70,27 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UButton> PartModeButton;
+	
+	// ---- Gamemode switcher ----
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UWidgetSwitcher> ModeSwitcher;
 
 	// ---- Start button ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UButton> StartGameButton;
+	
+	// ---- Start Button Text ----
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UTextBlock>	StartGameText;
+	
 
 	// ---- Sample image ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UImage> SampleImage;
+
+	// ---- Part mode controls ----
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UComboBoxString> PartSelector;
 
 	// ---- Settings container ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
@@ -86,9 +101,14 @@ protected:
 	TObjectPtr<UWidgetAnimation> ShowSettingsWidget;
 
 	// ---- State ----
+	UPROPERTY(BlueprintReadOnly)
 	bool bExpandedSettings = false;
 	
+	UPROPERTY(BlueprintReadOnly)
 	FName GameMode = TEXT("Mosaic");
+
+	UPROPERTY(BlueprintReadOnly)
+	TArray<FVector> PartDetails;
 
 public:
 	virtual void NativeConstruct() override;
@@ -125,7 +145,13 @@ protected:
 	UFUNCTION()
 	void OnStartGameClicked();
 
+	// ---- ComboBox callbacks ----
+	UFUNCTION()
+	void OnPartSelectionChanged(FString SelectedItem, ESelectInfo::Type SelectionType);
+
 private:
 	void BindSliders();
 	void BindButtons();
+	void ExchangeButtonStyle();
+	void RefreshSampleMaterial();
 };

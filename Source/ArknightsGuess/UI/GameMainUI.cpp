@@ -3,10 +3,12 @@
 
 #include "GameMainUI.h"
 #include "ArknightsGuess/Core/GuesserPlayerController.h"
+#include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorTypes.h"
 #include "ArknightsGuess/Operators/OperatorUISettings.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
+#include "Components/ComboBoxString.h"
 #include "Components/Image.h"
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
@@ -22,17 +24,25 @@ void UGameMainUI::NativeConstruct()
 	BindSliders();
 	BindButtons();
 
+	if (PartSelector)
+		PartSelector->OnSelectionChanged.AddDynamic(this, &UGameMainUI::OnPartSelectionChanged);
+	
+
 	// Init slider values from settings
 	if (auto* Settings = UOperatorUISettings::Get())
 	{
 		LevelSlider->SetValue(static_cast<float>(Settings->DefaultLevel));
-		LevelValueText->SetText(FText::AsNumber(Settings->DefaultLevel));
+		LevelValueText->SetText(FText::AsNumber(Settings->DefaultLevel/4));
 
 		GuessCountSlider->SetValue(static_cast<float>(Settings->MaxGuessCount));
 		GuessCountValueText->SetText(FText::AsNumber(Settings->MaxGuessCount));
 
 		HintFreqSlider->SetValue(static_cast<float>(Settings->HintFrequency));
 		HintFreqValueText->SetText(FText::AsNumber(Settings->HintFrequency));
+		
+		float Value = FMath::Min(Settings->ShuffleLimit, ShuffleLimitSlider->GetMaxValue());
+		ShuffleLimitSlider->SetValue(Value);
+		ShuffleLimitValueText->SetText(FText::AsNumber(Value));
 
 		if (SampleImage && Settings->SampleTex.IsValid())
 		{
@@ -43,7 +53,7 @@ void UGameMainUI::NativeConstruct()
 
 FReply UGameMainUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	if (!bExpandedSettings || SettingsBorder) return FReply::Unhandled();
+	if (!bExpandedSettings || !SettingsBorder) return FReply::Unhandled();
 	
 	const FGeometry& Geo = SettingsBorder->GetCachedGeometry();
 
@@ -94,12 +104,41 @@ void UGameMainUI::BindButtons()
 		StartGameButton->OnClicked.AddDynamic(this, &UGameMainUI::OnStartGameClicked);
 }
 
+void UGameMainUI::ExchangeButtonStyle()
+{
+	auto Style = MosaicModeButton->GetStyle();
+	auto Text = MosaicModeButton->GetColorAndOpacity();
+
+	MosaicModeButton->SetStyle(PartModeButton->GetStyle());
+	PartModeButton->SetStyle(Style);
+
+	MosaicModeButton->SetColorAndOpacity(PartModeButton->GetColorAndOpacity());
+	PartModeButton->SetColorAndOpacity(Text);
+
+	ModeSwitcher->SetActiveWidgetIndex(ModeSwitcher->GetActiveWidgetIndex() == 0 ? 1 : 0);
+
+	RefreshSampleMaterial();
+}
+
+void UGameMainUI::RefreshSampleMaterial()
+{
+	if (auto Settings = UOperatorUISettings::Get())
+	{
+		if (auto Material = Settings->GetMaterial(GameMode))
+		{
+			SampleImage->SetBrushFromMaterial(Material);
+		}
+	}
+}
+
 // ---- Slider callbacks ----
 
 void UGameMainUI::OnLevelSliderChanged(float Value)
 {
 	int32 IntVal = Value;
-	LevelValueText->SetText(FText::AsNumber(IntVal));
+	LevelValueText->SetText(FText::AsNumber(IntVal/4));
+	UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), IntVal);
+	
 }
 
 void UGameMainUI::OnGuessCountSliderChanged(float Value)
@@ -137,17 +176,51 @@ void UGameMainUI::OnMultiPlayClicked()
 
 void UGameMainUI::OnMosaicModeClicked()
 {
+	if (GameMode == TEXT("Mosaic")) return;
 	GameMode = TEXT("Mosaic");
+	
+	ExchangeButtonStyle();
+	UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), LevelSlider->GetValue());
+
 }
 
 void UGameMainUI::OnPartModeClicked()
 {
+	if (GameMode == TEXT("Part")) return;
 	GameMode = TEXT("Part");
+	
+	ExchangeButtonStyle();
+	FVector Detail = FVector(0,0,1);
+	if (!PartDetails.IsEmpty())
+	{
+		auto Index = PartSelector->GetSelectedIndex();
+		Detail = PartDetails.IsValidIndex(Index) ? PartDetails[Index] : PartDetails[FMath::RandRange(0, PartDetails.Num() - 1)];
+	}
+	UOperatorFunctionLibrary::SetOperatorDisplayPart(SampleImage->GetDynamicMaterial(),Detail);
+
+}
+
+void UGameMainUI::OnPartSelectionChanged(FString SelectedItem, ESelectInfo::Type SelectionType)
+{
+	if (PartDetails.IsEmpty()) return;
+
+	const int32 Index = PartSelector->GetSelectedIndex();
+	const FVector Detail = PartDetails.IsValidIndex(Index) ? PartDetails[Index] : PartDetails[FMath::RandRange(0, PartDetails.Num() - 1)];
+	UOperatorFunctionLibrary::SetOperatorDisplayPart(SampleImage->GetDynamicMaterial(), Detail);
 }
 
 void UGameMainUI::OnStartGameClicked()
 {
 	if (!GetWorld()) return;
+	
+	if (GameMode != TEXT("Mosaic"))
+	{
+		if (auto Subsystem = GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
+			Subsystem->ShowNotificationTemplate(EDevNotificationTemplate::NotImplemented);
+		return;
+	}
+
+	
 	if (auto PC = GetWorld()->GetFirstPlayerController<AGuesserPlayerController>())
 	{
 		PC->StartGame(GameMode);

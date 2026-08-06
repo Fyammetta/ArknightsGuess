@@ -2,3 +2,11 @@
 
 
 #include "OperatorUISettings.h"
+
+UMaterial* UOperatorUISettings::GetMaterial(const FName& Mode)
+{
+	if (Materials.Contains(Mode))
+		return Materials[Mode].LoadSynchronous();
+	
+	return nullptr;
+}

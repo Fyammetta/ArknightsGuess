@@ -36,4 +36,9 @@ private:
 	
 	UFUNCTION()
 	void OnCheckAnswer(EGuessRoundState RoundState);
+
+	UFUNCTION()
+	void OnShowNextHint();
+
+	int32 CurrentHintIndex = 0;
 };

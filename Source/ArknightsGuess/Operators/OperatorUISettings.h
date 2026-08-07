@@ -46,6 +46,9 @@ public:
 
 	UPROPERTY(config, EditAnywhere, Category = "Gameplay Rules", meta = (ClampMin = "0"))
 	int32 HintFrequency = 2;
+
+	UPROPERTY(config, EditAnywhere, Category = "Gameplay Rules", meta = (ClampMin = "1"))
+	int32 ClarityPerLevel = 4;
 	
 	UFUNCTION(BlueprintCallable, Category = "Datas")
 	UMaterial* GetMaterial(const FGameplayTag& Mode);

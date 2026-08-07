@@ -3,6 +3,7 @@
 
 #include "OperatorFunctionLibrary.h"
 #include "OperatorSubsystem.h"
+#include "OperatorUISettings.h"
 #include "ArknightsGuess.h"
 #include "Engine/GameInstance.h"
 
@@ -23,14 +24,16 @@ void UOperatorFunctionLibrary::SetOperatorClarity(UMaterialInstanceDynamic* Mate
 {
 	UE_LOG(LogArknights, Log, TEXT("[Lib] SetOperatorClarity | Clarity=%d"), Clarity);
 	if (!Material || Clarity < 0) return;
-	
-	if (Clarity % 4 == 0 && Clarity != 0)
+
+	const int32 Step = UOperatorUISettings::Get()->ClarityPerLevel;
+
+	if (Clarity % Step == 0 && Clarity != 0)
 	{
-		Material->SetScalarParameterValue(TEXT("OffsetX"),FMath::RandRange(-4,4));
-		Material->SetScalarParameterValue(TEXT("OffsetY"),FMath::RandRange(-4,4));
+		Material->SetScalarParameterValue(TEXT("OffsetX"),FMath::RandRange(-Step,Step));
+		Material->SetScalarParameterValue(TEXT("OffsetY"),FMath::RandRange(-Step,Step));
 	}
-	Material->SetScalarParameterValue(TEXT("Level"), Clarity / 4);
-	Material->SetScalarParameterValue(TEXT("SubLevel"), Clarity % 4);
+	Material->SetScalarParameterValue(TEXT("Level"), Clarity / Step);
+	Material->SetScalarParameterValue(TEXT("SubLevel"), Clarity % Step);
 }
 
 void UOperatorFunctionLibrary::SetOperatorDisplayPart(UMaterialInstanceDynamic* Material, const FVector& Detail)

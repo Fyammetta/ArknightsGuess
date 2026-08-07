@@ -39,21 +39,22 @@ void UGameMainUI::NativeConstruct()
 
 	if (PartSelector)
 		PartSelector->OnSelectionChanged.AddUniqueDynamic(this, &UGameMainUI::OnPartSelectionChanged);
-	
+
 
 	// Init slider values from settings
 	if (auto* Settings = UOperatorUISettings::Get())
 	{
 		LevelSlider->SetValue(static_cast<float>(Settings->DefaultLevel));
-		LevelSlider->SetStepSize(4.0f);
-		LevelValueText->SetText(FText::AsNumber(Settings->DefaultLevel/4));
+		const float ClarityStep = static_cast<float>(Settings->ClarityPerLevel);
+		LevelSlider->SetStepSize(ClarityStep);
+		LevelValueText->SetText(FText::AsNumber(Settings->DefaultLevel / Settings->ClarityPerLevel));
 
 		GuessCountSlider->SetValue(static_cast<float>(Settings->MaxGuessCount));
 		GuessCountValueText->SetText(FText::AsNumber(Settings->MaxGuessCount));
 
 		HintFreqSlider->SetValue(static_cast<float>(Settings->HintFrequency));
 		HintFreqValueText->SetText(FText::AsNumber(Settings->HintFrequency));
-		
+
 		float Value = FMath::Min(Settings->ShuffleLimit, ShuffleLimitSlider->GetMaxValue());
 		ShuffleLimitSlider->SetValue(Value);
 		ShuffleLimitValueText->SetText(FText::AsNumber(Value));
@@ -84,10 +85,11 @@ FReply UGameMainUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const F
 		if (SampleGeo.IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
 		{
 			bShowGameplayLevel = !bShowGameplayLevel;
-			LevelSlider->SetStepSize(bShowGameplayLevel ? 4.0f : 1.0f);
+			const int32 Step = UOperatorUISettings::Get()->ClarityPerLevel;
+			LevelSlider->SetStepSize(bShowGameplayLevel ? static_cast<float>(Step) : 1.0f);
 			if (bShowGameplayLevel)
 			{
-				const int32 Rounded = FMath::DivideAndRoundUp(static_cast<int32>(LevelSlider->GetValue()), 4) * 4;
+				const int32 Rounded = FMath::DivideAndRoundUp(static_cast<int32>(LevelSlider->GetValue()), Step) * Step;
 				LevelSlider->SetValue(static_cast<float>(Rounded));
 			}
 			RefreshSampleClarity();
@@ -177,19 +179,20 @@ void UGameMainUI::RefreshSampleClarity()
 {
 	if (!SampleImage || !LevelSlider) return;
 
+	const int32 Step = UOperatorUISettings::Get()->ClarityPerLevel;
 	const int32 RawValue = static_cast<int32>(LevelSlider->GetValue());
 
 	if (bShowGameplayLevel)
 	{
-		// Gameplay level: round up to nearest multiple of 4
-		const int32 GameplayValue = FMath::DivideAndRoundUp(RawValue, 4) * 4;
-		LevelValueText->SetText(FText::AsNumber(GameplayValue / 4));
+		// Gameplay level: round up to nearest multiple of ClarityPerLevel
+		const int32 GameplayValue = FMath::DivideAndRoundUp(RawValue, Step) * Step;
+		LevelValueText->SetText(FText::AsNumber(GameplayValue / Step));
 		UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), GameplayValue);
 	}
 	else
 	{
 		// Actual level: pass raw value as-is
-		LevelValueText->SetText(FText::AsNumber(RawValue / 4));
+		LevelValueText->SetText(FText::AsNumber(RawValue / Step));
 		UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), RawValue);
 	}
 }
@@ -238,7 +241,7 @@ void UGameMainUI::OnMosaicModeClicked()
 {
 	if (GameMode == GameModeTags::Mosaic) return;
 	GameMode = GameModeTags::Mosaic;
-	
+
 	ExchangeButtonStyle();
 	RefreshSampleClarity();
 
@@ -248,7 +251,7 @@ void UGameMainUI::OnPartModeClicked()
 {
 	if (GameMode == GameModeTags::Part) return;
 	GameMode = GameModeTags::Part;
-	
+
 	ExchangeButtonStyle();
 	FVector Detail = FVector(0,0,1);
 	if (!PartDetails.IsEmpty())
@@ -273,18 +276,18 @@ void UGameMainUI::OnStartGameClicked()
 {
 	UE_LOG(LogArknights, Log, TEXT("[MainUI] OnStartGameClicked | Mode=%s"), *GameMode.ToString());
 	if (!GetWorld()) { UE_LOG(LogArknights, Warning, TEXT("[MainUI] OnStartGameClicked failed: no World")); return; }
-	
+
 	if (GameMode != GameModeTags::Mosaic)
 	{
 		if (auto Subsystem = GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
 			Subsystem->ShowNotificationTemplate(EDevNotificationTemplate::NotImplemented);
 		return;
 	}
-	
+
 	TWeakObjectPtr<AGuesserPlayerController> PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr;
 	PlayAnimation(ShowSettingsWidget,1,1,EUMGSequencePlayMode::Reverse)->OnSequenceFinishedPlaying().AddWeakLambda(this,
 		[PC, Mode = GameMode](UUMGSequencePlayer&)
-		{		
+		{
 			if (PC.IsValid())
 				PC->StartGame(Mode);
 		});

@@ -77,6 +77,8 @@ FReply UGuessHudBase::NativeOnMouseButtonDown(const FGeometry& InGeometry, const
 	{
 		if (auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr)
 			PC->RequestNextRound();
+		
+		AnswerBox->SetText(FText::GetEmpty());
 	}
 	
 	return FReply::Unhandled();
@@ -96,7 +98,8 @@ void UGuessHudBase::OnAnswerConfirmed()
 	auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr;
 	auto Answer = FName(AnswerBox->GetText().ToString());
 	if (!PC) { UE_LOG(LogArknights, Warning, TEXT("[HUD] OnAnswerConfirmed failed: no PlayerController")); return; }
-
+	
+	AnswerBox->SetText(FText::GetEmpty());
 	PC->ConfirmAnswer(Answer);
 }
 

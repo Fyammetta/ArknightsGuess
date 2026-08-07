@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "OperatorImgUnit.h"
@@ -14,12 +14,13 @@
 void UOperatorImgUnit::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
+
 	if (auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
 		Subsystem->OnOperatorDataReceived.AddUniqueDynamic(this, &UOperatorImgUnit::SetupUnit);
 		Subsystem->OnGuessProcessChanged.AddUniqueDynamic(this, &UOperatorImgUnit::OnCallClarify);
 		Subsystem->OnGuessRoundStateChanged.AddUniqueDynamic(this, &UOperatorImgUnit::OnCheckAnswer);
+		Subsystem->OnNextHintsDisplayAllowed.AddUniqueDynamic(this, &UOperatorImgUnit::OnShowNextHint);
 	}
 }
 
@@ -32,11 +33,14 @@ void UOperatorImgUnit::SetupUnit(const FOperatorImage& Img, const TArray<FString
 	Dynamic->SetTextureParameterValue(TEXT("Tex"),Tex);
 	UOperatorFunctionLibrary::SetOperatorClarity(Dynamic,Subsystem->GetDefaultLevel());
 	Image->SetBrushFromMaterial(Dynamic);
+
+	CurrentHintIndex = 0;
+
 	const auto& Children = HintBox->GetAllChildren();
 	for (int i = 0; i < Children.Num(); ++i)
 	{
 		if (auto Hint = Cast<UHintTextUnit>(Children[i]))
-		{		
+		{
 			Hint->SetVisibility(ESlateVisibility::Collapsed);
 
 			if (Hints.IsValidIndex(i))
@@ -58,5 +62,18 @@ void UOperatorImgUnit::OnCheckAnswer(EGuessRoundState RoundState)
 		case EGuessRoundState::Verify:Image->GetDynamicMaterial()->SetScalarParameterValue(TEXT("Complete"), 1);
 		case EGuessRoundState::Reveal:	UOperatorFunctionLibrary::SetOperatorClarity(Image->GetDynamicMaterial(),0);
 		default:break;
+	}
+}
+
+void UOperatorImgUnit::OnShowNextHint()
+{
+	const auto& Children = HintBox->GetAllChildren();
+	if (CurrentHintIndex < Children.Num())
+	{
+		if (auto Hint = Cast<UHintTextUnit>(Children[CurrentHintIndex]))
+		{
+			Hint->SetVisibility(ESlateVisibility::HitTestInvisible);
+		}
+		CurrentHintIndex++;
 	}
 }

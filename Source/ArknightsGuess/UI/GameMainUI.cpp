@@ -2,6 +2,8 @@
 
 
 #include "GameMainUI.h"
+
+#include "Animation/UMGSequencePlayer.h"
 #include "ArknightsGuess/Core/GuesserPlayerController.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorTypes.h"
@@ -13,25 +15,37 @@
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
 #include "Components/WidgetSwitcher.h"
-#include "DevNotification/Public/DevNotificationSettings.h"
 #include "DevNotification/Public/DevNotificationSubsystem.h"
+#include "ArknightsGuess.h"
+
+namespace GameModeTags
+{
+	static const FGameplayTag Mosaic = FGameplayTag::RequestGameplayTag("GameMode.Mosaic");
+	static const FGameplayTag Part   = FGameplayTag::RequestGameplayTag("GameMode.Part");
+}
 
 
 void UGameMainUI::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	if (!GameMode.IsValid())
+	{
+		GameMode = GameModeTags::Mosaic;
+	}
+
 	BindSliders();
 	BindButtons();
 
 	if (PartSelector)
-		PartSelector->OnSelectionChanged.AddDynamic(this, &UGameMainUI::OnPartSelectionChanged);
+		PartSelector->OnSelectionChanged.AddUniqueDynamic(this, &UGameMainUI::OnPartSelectionChanged);
 	
 
 	// Init slider values from settings
 	if (auto* Settings = UOperatorUISettings::Get())
 	{
 		LevelSlider->SetValue(static_cast<float>(Settings->DefaultLevel));
+		LevelSlider->SetStepSize(4.0f);
 		LevelValueText->SetText(FText::AsNumber(Settings->DefaultLevel/4));
 
 		GuessCountSlider->SetValue(static_cast<float>(Settings->MaxGuessCount));
@@ -51,31 +65,59 @@ void UGameMainUI::NativeConstruct()
 	}
 }
 
+void UGameMainUI::NativeDestruct()
+{
+	if (PartSelector)
+	{
+		PartSelector->OnSelectionChanged.RemoveDynamic(this, &UGameMainUI::OnPartSelectionChanged);
+	}
+
+	Super::NativeDestruct();
+}
+
 FReply UGameMainUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
+	// ---- Sample image click: toggle gameplay / actual level (Mosaic only) ----
+	if (SampleImage && GameMode == GameModeTags::Mosaic)
+	{
+		const FGeometry& SampleGeo = SampleImage->GetCachedGeometry();
+		if (SampleGeo.IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
+		{
+			bShowGameplayLevel = !bShowGameplayLevel;
+			LevelSlider->SetStepSize(bShowGameplayLevel ? 4.0f : 1.0f);
+			if (bShowGameplayLevel)
+			{
+				const int32 Rounded = FMath::DivideAndRoundUp(static_cast<int32>(LevelSlider->GetValue()), 4) * 4;
+				LevelSlider->SetValue(static_cast<float>(Rounded));
+			}
+			RefreshSampleClarity();
+			return FReply::Handled();
+		}
+	}
+
 	if (!bExpandedSettings || !SettingsBorder) return FReply::Unhandled();
-	
+
 	const FGeometry& Geo = SettingsBorder->GetCachedGeometry();
 
 	if (!Geo.IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
 	{
 		PlayAnimationReverse(ShowSettingsWidget);
 		bExpandedSettings = false;
-		FReply::Handled();
+		return FReply::Handled();
 	}
-	
+
 	return FReply::Unhandled();
 }
 
 void UGameMainUI::BindSliders()
 {
 	if (LevelSlider)
-		LevelSlider->OnValueChanged.AddDynamic(this, &UGameMainUI::OnLevelSliderChanged);
+		LevelSlider->OnValueChanged.AddUniqueDynamic(this, &UGameMainUI::OnLevelSliderChanged);
 	if (GuessCountSlider)
-		GuessCountSlider->OnValueChanged.AddDynamic(this, &UGameMainUI::OnGuessCountSliderChanged);
+		GuessCountSlider->OnValueChanged.AddUniqueDynamic(this, &UGameMainUI::OnGuessCountSliderChanged);
 	if (ShuffleLimitSlider)
 	{
-		ShuffleLimitSlider->OnValueChanged.AddDynamic(this, &UGameMainUI::OnShuffleLimitSliderChanged);
+		ShuffleLimitSlider->OnValueChanged.AddUniqueDynamic(this, &UGameMainUI::OnShuffleLimitSliderChanged);
 		if (auto Settings = UOperatorUISettings::Get())
 		{
 			int32 Max = 0;
@@ -87,21 +129,21 @@ void UGameMainUI::BindSliders()
 		}
 	}
 	if (HintFreqSlider)
-		HintFreqSlider->OnValueChanged.AddDynamic(this, &UGameMainUI::OnHintFreqSliderChanged);
+		HintFreqSlider->OnValueChanged.AddUniqueDynamic(this, &UGameMainUI::OnHintFreqSliderChanged);
 }
 
 void UGameMainUI::BindButtons()
 {
 	if (SoloPlayButton)
-		SoloPlayButton->OnClicked.AddDynamic(this, &UGameMainUI::OnSoloPlayClicked);
+		SoloPlayButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnSoloPlayClicked);
 	if (MultiPlayButton)
-		MultiPlayButton->OnClicked.AddDynamic(this, &UGameMainUI::OnMultiPlayClicked);
+		MultiPlayButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnMultiPlayClicked);
 	if (MosaicModeButton)
-		MosaicModeButton->OnClicked.AddDynamic(this, &UGameMainUI::OnMosaicModeClicked);
+		MosaicModeButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnMosaicModeClicked);
 	if (PartModeButton)
-		PartModeButton->OnClicked.AddDynamic(this, &UGameMainUI::OnPartModeClicked);
+		PartModeButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnPartModeClicked);
 	if (StartGameButton)
-		StartGameButton->OnClicked.AddDynamic(this, &UGameMainUI::OnStartGameClicked);
+		StartGameButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnStartGameClicked);
 }
 
 void UGameMainUI::ExchangeButtonStyle()
@@ -131,14 +173,32 @@ void UGameMainUI::RefreshSampleMaterial()
 	}
 }
 
+void UGameMainUI::RefreshSampleClarity()
+{
+	if (!SampleImage || !LevelSlider) return;
+
+	const int32 RawValue = static_cast<int32>(LevelSlider->GetValue());
+
+	if (bShowGameplayLevel)
+	{
+		// Gameplay level: round up to nearest multiple of 4
+		const int32 GameplayValue = FMath::DivideAndRoundUp(RawValue, 4) * 4;
+		LevelValueText->SetText(FText::AsNumber(GameplayValue / 4));
+		UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), GameplayValue);
+	}
+	else
+	{
+		// Actual level: pass raw value as-is
+		LevelValueText->SetText(FText::AsNumber(RawValue / 4));
+		UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), RawValue);
+	}
+}
+
 // ---- Slider callbacks ----
 
 void UGameMainUI::OnLevelSliderChanged(float Value)
 {
-	int32 IntVal = Value;
-	LevelValueText->SetText(FText::AsNumber(IntVal/4));
-	UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), IntVal);
-	
+	RefreshSampleClarity();
 }
 
 void UGameMainUI::OnGuessCountSliderChanged(float Value)
@@ -176,18 +236,18 @@ void UGameMainUI::OnMultiPlayClicked()
 
 void UGameMainUI::OnMosaicModeClicked()
 {
-	if (GameMode == TEXT("Mosaic")) return;
-	GameMode = TEXT("Mosaic");
+	if (GameMode == GameModeTags::Mosaic) return;
+	GameMode = GameModeTags::Mosaic;
 	
 	ExchangeButtonStyle();
-	UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), LevelSlider->GetValue());
+	RefreshSampleClarity();
 
 }
 
 void UGameMainUI::OnPartModeClicked()
 {
-	if (GameMode == TEXT("Part")) return;
-	GameMode = TEXT("Part");
+	if (GameMode == GameModeTags::Part) return;
+	GameMode = GameModeTags::Part;
 	
 	ExchangeButtonStyle();
 	FVector Detail = FVector(0,0,1);
@@ -211,18 +271,22 @@ void UGameMainUI::OnPartSelectionChanged(FString SelectedItem, ESelectInfo::Type
 
 void UGameMainUI::OnStartGameClicked()
 {
-	if (!GetWorld()) return;
+	UE_LOG(LogArknights, Log, TEXT("[MainUI] OnStartGameClicked | Mode=%s"), *GameMode.ToString());
+	if (!GetWorld()) { UE_LOG(LogArknights, Warning, TEXT("[MainUI] OnStartGameClicked failed: no World")); return; }
 	
-	if (GameMode != TEXT("Mosaic"))
+	if (GameMode != GameModeTags::Mosaic)
 	{
 		if (auto Subsystem = GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
 			Subsystem->ShowNotificationTemplate(EDevNotificationTemplate::NotImplemented);
 		return;
 	}
-
 	
-	if (auto PC = GetWorld()->GetFirstPlayerController<AGuesserPlayerController>())
-	{
-		PC->StartGame(GameMode);
-	}
+	TWeakObjectPtr<AGuesserPlayerController> PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr;
+	PlayAnimation(ShowSettingsWidget,1,1,EUMGSequencePlayMode::Reverse)->OnSequenceFinishedPlaying().AddWeakLambda(this,
+		[PC, Mode = GameMode](UUMGSequencePlayer&)
+		{		
+			if (PC.IsValid())
+				PC->StartGame(Mode);
+		});
+
 }

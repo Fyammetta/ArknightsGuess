@@ -4,12 +4,14 @@
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
 #include "Net/UnrealNetwork.h"
+#include "ArknightsGuess.h"
 
 void AGuessGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AGuessGameStateBase, RoundState);
+	DOREPLIFETIME(AGuessGameStateBase, GuessCount);
 	DOREPLIFETIME(AGuessGameStateBase, RoundNumber);
 	DOREPLIFETIME(AGuessGameStateBase, TriedAnswers);
 }
@@ -21,6 +23,7 @@ EGuessRoundState AGuessGameStateBase::GetGuessRoundState() const
 
 void AGuessGameStateBase::SetGuessRoundState(EGuessRoundState State)
 {
+	UE_LOG(LogArknights, Log, TEXT("[GS] SetGuessRoundState | State=%d | Authority=%d"), static_cast<int32>(State), HasAuthority());
 	RoundState = State;
 
 	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
@@ -34,8 +37,31 @@ int32 AGuessGameStateBase::GetGuessCount() const
 	return GuessCount;
 }
 
+void AGuessGameStateBase::NetMulticast_StartGame_Implementation(const FGameplayTag& Mode)
+{
+	UE_LOG(LogArknights, Log, TEXT("[GS] NetMulticast_StartGame | Mode=%s | Authority=%d"), *Mode.ToString(), HasAuthority());
+	if (HasAuthority()) return;
+	
+	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
+	{
+		Subsystem->StartUp(Mode);
+	}
+}
+
+void AGuessGameStateBase::NetMulticast_EndGame_Implementation()
+{	
+	UE_LOG(LogArknights, Log, TEXT("[GS] NetMulticast_EndGame | Authority=%d"), HasAuthority());
+	if (HasAuthority()) return;
+	
+	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
+	{
+		Subsystem->EndGame();
+	}
+}
+
 void AGuessGameStateBase::NetMulticast_SetupOperator_Implementation(const FOperatorImage& Tex, const TArray<FString>& Hints)
 {
+	UE_LOG(LogArknights, Log, TEXT("[GS] NetMulticast_SetupOperator | Hints=%d | Authority=%d"), Hints.Num(), HasAuthority());
 	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
 		Subsystem->OnOperatorDataReceived.Broadcast(Tex, Hints);
@@ -52,6 +78,7 @@ void AGuessGameStateBase::NetMulticast_DisplayNextHint_Implementation()
 
 void AGuessGameStateBase::OnRep_OnGuessStateChanged()
 {
+	UE_LOG(LogArknights, Log, TEXT("[GS] OnRep_GuessStateChanged | State=%d"), static_cast<int32>(RoundState));
 	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
 		Subsystem->OnGuessRoundStateChanged.Broadcast(RoundState);
@@ -79,6 +106,7 @@ void AGuessGameStateBase::OnRep_NextRound()
 
 void AGuessGameStateBase::EnterNewRound(const FOperatorData& Operator)
 {
+	UE_LOG(LogArknights, Log, TEXT("[GS] EnterNewRound | Answer=%s | Authority=%d"), *Operator.Name.ToString(), HasAuthority());
 	if (!HasAuthority()) return;
 
 	auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
@@ -88,7 +116,12 @@ void AGuessGameStateBase::EnterNewRound(const FOperatorData& Operator)
 	GuessCount = 0;
 
 	TArray<FString> Hints;
-	Operator.Info.GenerateValueArray(Hints);
+	for (const TPair<FName, FString>& Info : Operator.Info)
+	{
+		Hints.Add(Info.Key.ToString() + "/" + Info.Value);
+	}
+	
+	
 	
 	for (int32 i = Hints.Num() - 1; i > 0; i--) {
 		int32 j = FMath::Floor(FMath::Rand() * (i + 1)) % Hints.Num();
@@ -102,6 +135,7 @@ void AGuessGameStateBase::EnterNewRound(const FOperatorData& Operator)
 
 void AGuessGameStateBase::Clarify()
 {
+	UE_LOG(LogArknights, Log, TEXT("[GS] Clarify | GuessCount=%d | Authority=%d"), GuessCount, HasAuthority());
 	if (!HasAuthority()) return;
 	GuessCount++;
 }

@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Operators/OperatorTypes.h"
 #include "OperatorImgUnit.generated.h"
 
+struct FOperatorImage;
 class UWrapBox;
-struct FOperatorData;
 class UImage;
 /**
  * 
@@ -17,13 +18,22 @@ class ARKNIGHTSGUESS_API UOperatorImgUnit : public UUserWidget
 {
 	GENERATED_BODY()
 	
-	protected:
+protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UImage* Image;
 	
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UWrapBox* HintBox;
 	
-public:
-	void SetupUnit(const FOperatorData& Data);
+	virtual void NativeConstruct() override;
+	
+private:
+	UFUNCTION()
+	void SetupUnit(const FOperatorImage& Img, const TArray<FString>& Hints);
+	
+	UFUNCTION()
+	void OnCallClarify(int32 Round, int32 Level);
+	
+	UFUNCTION()
+	void OnCheckAnswer(EGuessRoundState RoundState);
 };

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "OperatorSubsystem.generated.h"
 
@@ -30,7 +31,7 @@ class ARKNIGHTSGUESS_API UOperatorSubsystem : public UGameInstanceSubsystem
 	TArray<FOperatorData> UsedOperators;
 	TSet<FName> OperatorNames;
 
-	FName GuessMode;
+	FGameplayTag GuessMode;
 	int32 DefaultLevel;
 	int32 ShuffleLimit;
 	int32 MaxGuessCount;
@@ -53,7 +54,7 @@ public:
 	FDisplayNextHintsDelegate OnNextHintsDisplayAllowed;
 
 	UFUNCTION(BlueprintCallable)
-	void StartUp(const FName& Mode);
+	void StartUp(const FGameplayTag& Mode);
 
 	UFUNCTION(BlueprintCallable)
 	void EndGame();
@@ -61,7 +62,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	TSet<FName> GetAllOperatorNames() const;
 
-	UMaterialInstanceDynamic* GetDynamicMaterial(const FOperatorData& Data);
+	UMaterialInstanceDynamic* GetDynamicMaterial();
 
 	UFUNCTION(BlueprintCallable)
 	void SetDefaultLevel(int32 Level);
@@ -92,6 +93,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	bool IsRunningOnServer() const;
+
+	// ---- Net sync helpers (no server guard, called from PC NetMulticast) ----
+	void NetSync_DefaultLevel(int32 Level);
+	void NetSync_ShuffleLimit(int32 Limit);
+	void NetSync_MaxGuessCount(int32 Count);
+	void NetSync_HintFrequency(int32 Freq);
 
 private:
 	UDataTable* GetCachedDataTable();

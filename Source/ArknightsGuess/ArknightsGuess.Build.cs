@@ -8,12 +8,15 @@ public class ArknightsGuess : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
+		PublicIncludePaths.Add(ModuleDirectory);
+
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",
 			"CoreUObject",
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
+			"GameplayTags",
 			"NetCore",
 			"UMG",
 			"DevNotification",

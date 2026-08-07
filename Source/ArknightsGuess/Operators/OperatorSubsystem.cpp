@@ -4,6 +4,7 @@
 #include "OperatorTypes.h"
 #include "OperatorUISettings.h"
 #include "ArknightsGuess/Core/GuessGameStateBase.h"
+#include "ArknightsGuess.h"
 
 UDataTable* UOperatorSubsystem::GetCachedDataTable()
 {
@@ -32,8 +33,6 @@ void UOperatorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		HintFrequency = Settings->HintFrequency;
 		SetDefaultLevel(Settings->DefaultLevel);
 	}
-	
-	StartUp(FName("Mosaic"));
 }
 
 void UOperatorSubsystem::Deinitialize()
@@ -42,9 +41,10 @@ void UOperatorSubsystem::Deinitialize()
 	EndGame();
 }
 
-void UOperatorSubsystem::StartUp(const FName& Mode)
+void UOperatorSubsystem::StartUp(const FGameplayTag& Mode)
 {
-	if (IsGameRunning) return;
+	UE_LOG(LogArknights, Log, TEXT("[Subsystem] StartUp | Mode=%s | IsServer=%d"), *Mode.ToString(), IsRunningOnServer());
+	if (IsGameRunning) { UE_LOG(LogArknights, Warning, TEXT("[Subsystem] StartUp ignored: game already running")); return; }
 
 	if (UDataTable* DataTable = GetCachedDataTable())
 	{
@@ -67,10 +67,12 @@ void UOperatorSubsystem::StartUp(const FName& Mode)
 
 void UOperatorSubsystem::EndGame()
 {
+	UE_LOG(LogArknights, Log, TEXT("[Subsystem] EndGame | IsServer=%d"), IsRunningOnServer());
 	if (!IsGameRunning) return;
 
 	UsedOperators.Empty();
 	SpareOperators.Empty();
+	IsGameRunning = false;
 	OnGuessGameEnd.Broadcast();
 }
 
@@ -79,10 +81,10 @@ TSet<FName> UOperatorSubsystem::GetAllOperatorNames() const
 	return OperatorNames;
 }
 
-UMaterialInstanceDynamic* UOperatorSubsystem::GetDynamicMaterial(const FOperatorData& Data)
+UMaterialInstanceDynamic* UOperatorSubsystem::GetDynamicMaterial()
 {
 	auto* Settings = UOperatorUISettings::Get();
-	if (!Settings) return nullptr;
+	if (!Settings) { UE_LOG(LogArknights, Warning, TEXT("[Subsystem] GetDynamicMaterial failed: no Settings")); return nullptr; }
 
 	if (!MaterialBase && Settings->Materials.Contains(GuessMode))
 	{
@@ -91,16 +93,14 @@ UMaterialInstanceDynamic* UOperatorSubsystem::GetDynamicMaterial(const FOperator
 
 	if (!MaterialBase) return nullptr;
 
-	UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(MaterialBase, this);
-	MID->SetTextureParameterValue(TEXT("Tex"), Data.Image.Texture.LoadSynchronous());
-	return MID;
+	return UMaterialInstanceDynamic::Create(MaterialBase, this);;
 }
 
 void UOperatorSubsystem::SetDefaultLevel(int32 Level)
 {
 	if (!IsRunningOnServer() || IsGameRunning || Level <= 0)
 		return;
-	DefaultLevel = Level * 4;
+	DefaultLevel = Level;
 }
 
 int32 UOperatorSubsystem::GetDefaultLevel() const
@@ -145,7 +145,8 @@ int32 UOperatorSubsystem::GetHintFrequency() const
 
 FOperatorData UOperatorSubsystem::GetRandomOperatorData()
 {
-	if (!IsRunningOnServer() || SpareOperators.IsEmpty()) return FOperatorData();
+	UE_LOG(LogArknights, Log, TEXT("[Subsystem] GetRandomOperatorData | Spare=%d | Used=%d"), SpareOperators.Num(), UsedOperators.Num());
+	if (!IsRunningOnServer() || SpareOperators.IsEmpty()) { UE_LOG(LogArknights, Warning, TEXT("[Subsystem] GetRandomOperatorData failed: not server or no operators")); return FOperatorData(); }
 
 	if (ShuffleLimit <= 0)
 	{
@@ -162,6 +163,26 @@ FOperatorData UOperatorSubsystem::GetRandomOperatorData()
 	FOperatorData Data = SpareOperators.Pop();
 	UsedOperators.Add(Data);
 	return Data;
+}
+
+void UOperatorSubsystem::NetSync_DefaultLevel(int32 Level)
+{
+	DefaultLevel = Level;
+}
+
+void UOperatorSubsystem::NetSync_ShuffleLimit(int32 Limit)
+{
+	ShuffleLimit = Limit;
+}
+
+void UOperatorSubsystem::NetSync_MaxGuessCount(int32 Count)
+{
+	MaxGuessCount = Count;
+}
+
+void UOperatorSubsystem::NetSync_HintFrequency(int32 Freq)
+{
+	HintFrequency = Freq;
 }
 
 bool UOperatorSubsystem::IsRunningOnServer() const

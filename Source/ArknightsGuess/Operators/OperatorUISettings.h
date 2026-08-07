@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Engine/DeveloperSettings.h"
 #include "OperatorTypes.h"
 #include "OperatorUISettings.generated.h"
@@ -24,7 +25,7 @@ public:
 
 	// ---- Datas ----
 	UPROPERTY(config, EditAnywhere, Category = "Datas")
-	TMap<FName, TSoftObjectPtr<UMaterial>> Materials;
+	TMap<FGameplayTag, TSoftObjectPtr<UMaterial>> Materials;
 
 	UPROPERTY(config, EditAnywhere, Category = "Datas")
 	TSoftObjectPtr<UDataTable> OperatorDatas;
@@ -47,5 +48,5 @@ public:
 	int32 HintFrequency = 2;
 	
 	UFUNCTION(BlueprintCallable, Category = "Datas")
-	UMaterial* GetMaterial(const FName& Mode);
+	UMaterial* GetMaterial(const FGameplayTag& Mode);
 };

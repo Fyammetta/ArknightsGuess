@@ -3,6 +3,7 @@
 
 #include "OperatorFunctionLibrary.h"
 #include "OperatorSubsystem.h"
+#include "ArknightsGuess.h"
 #include "Engine/GameInstance.h"
 
 UOperatorSubsystem* UOperatorFunctionLibrary::GetOperatorSubsystem(UObject* WorldContextObject)
@@ -20,6 +21,7 @@ UOperatorSubsystem* UOperatorFunctionLibrary::GetOperatorSubsystem(UObject* Worl
 
 void UOperatorFunctionLibrary::SetOperatorClarity(UMaterialInstanceDynamic* Material, int32 Clarity)
 {
+	UE_LOG(LogArknights, Log, TEXT("[Lib] SetOperatorClarity | Clarity=%d"), Clarity);
 	if (!Material || Clarity < 0) return;
 	
 	if (Clarity % 4 == 0 && Clarity != 0)
@@ -33,6 +35,7 @@ void UOperatorFunctionLibrary::SetOperatorClarity(UMaterialInstanceDynamic* Mate
 
 void UOperatorFunctionLibrary::SetOperatorDisplayPart(UMaterialInstanceDynamic* Material, const FVector& Detail)
 {
+	UE_LOG(LogArknights, Log, TEXT("[Lib] SetOperatorDisplayPart | Detail=(%.2f, %.2f, %.2f)"), Detail.X, Detail.Y, Detail.Z);
 	if (!Material || Detail.Z <= 0) return;
 
 	Material->SetScalarParameterValue(TEXT("X"),Detail.X);

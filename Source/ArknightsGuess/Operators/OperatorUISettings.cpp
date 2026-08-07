@@ -3,10 +3,10 @@
 
 #include "OperatorUISettings.h"
 
-UMaterial* UOperatorUISettings::GetMaterial(const FName& Mode)
+UMaterial* UOperatorUISettings::GetMaterial(const FGameplayTag& Mode)
 {
 	if (Materials.Contains(Mode))
 		return Materials[Mode].LoadSynchronous();
-	
+
 	return nullptr;
 }

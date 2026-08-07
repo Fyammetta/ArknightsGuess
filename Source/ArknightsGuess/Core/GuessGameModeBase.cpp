@@ -5,21 +5,45 @@
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
 #include "ArknightsGuess/Operators/OperatorTypes.h"
-#include "Blueprint/UserWidget.h"
+#include "ArknightsGuess.h"
 
-void AGuessGameModeBase::BeginPlay()
+
+void AGuessGameModeBase::StartGame(const FGameplayTag& Mode)
 {
-	Super::BeginPlay();
-	MainUIWidget = CreateWidget<UUserWidget>(GetWorld(), MainUIClass,TEXT("MainUIWidget"));
-	MainUIWidget->AddToViewport();
+	UE_LOG(LogArknights, Log, TEXT("[GM] StartGame | Mode=%s"), *Mode.ToString());
+	if (AGuessGameStateBase* GS = GetGameState<AGuessGameStateBase>())
+	{
+		GS->NetMulticast_StartGame(Mode);
+	}
+}
+
+void AGuessGameModeBase::EndGame()
+{
+	UE_LOG(LogArknights, Log, TEXT("[GM] EndGame"));
+	if (AGuessGameStateBase* GS = GetGameState<AGuessGameStateBase>())
+	{
+		GS->NetMulticast_EndGame();
+	}
+
+	SetRoundState(EGuessRoundState::WaitingForPlayers);
 }
 
 void AGuessGameModeBase::StartNewRound()
 {
+	UE_LOG(LogArknights, Log, TEXT("[GM] StartNewRound"));
 	AGuessGameStateBase* GS = GetGameState<AGuessGameStateBase>();
 	UOperatorSubsystem* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
 	if (!GS || !Subsystem)
 	{
+		UE_LOG(LogArknights, Warning, TEXT("[GM] StartNewRound failed: no GameState or Subsystem"));
+		return;
+	}
+
+	// Guard: don't start a new round if one is already in progress
+	// (e.g. multiple clients calling RequestNextRound simultaneously)
+	if (GS->GetGuessRoundState() == EGuessRoundState::Guessing)
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[GM] StartNewRound ignored: round already in progress"));
 		return;
 	}
 
@@ -36,11 +60,13 @@ void AGuessGameModeBase::StartNewRound()
 
 void AGuessGameModeBase::ProcessGuess(const FName& OperatorName)
 {
+	UE_LOG(LogArknights, Log, TEXT("[GM] ProcessGuess | Answer=%s"), *OperatorName.ToString());
 	AGuessGameStateBase* GS = GetGameState<AGuessGameStateBase>();
 	UOperatorSubsystem* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
 
 	if (!Subsystem || !GS || GS->GetGuessRoundState() != EGuessRoundState::Guessing)
 	{
+		UE_LOG(LogArknights, Warning, TEXT("[GM] ProcessGuess failed: bad state or missing Subsystem/GS"));
 		return;
 	}
 
@@ -66,6 +92,7 @@ void AGuessGameModeBase::ProcessGuess(const FName& OperatorName)
 
 void AGuessGameModeBase::SetRoundState(EGuessRoundState NewState) const
 {
+	UE_LOG(LogArknights, Log, TEXT("[GM] SetRoundState | State=%d"), static_cast<int32>(NewState));
 	if (AGuessGameStateBase* GS = GetGameState<AGuessGameStateBase>())
 	{
 		GS->SetGuessRoundState(NewState);

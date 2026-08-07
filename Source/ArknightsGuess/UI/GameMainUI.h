@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Blueprint/UserWidget.h"
 #include "GameMainUI.generated.h"
 
@@ -26,7 +27,6 @@ class ARKNIGHTSGUESS_API UGameMainUI : public UUserWidget
 	GENERATED_BODY()
 
 protected:
-
 	// ---- Play mode buttons ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UButton> SoloPlayButton;
@@ -103,16 +103,21 @@ protected:
 	// ---- State ----
 	UPROPERTY(BlueprintReadOnly)
 	bool bExpandedSettings = false;
+	UPROPERTY(BlueprintReadOnly)
+	bool bShowGameplayLevel = true;
+
 	
 	UPROPERTY(BlueprintReadOnly)
-	FName GameMode = TEXT("Mosaic");
+	FGameplayTag GameMode;
 
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FVector> PartDetails;
 
+
 public:
 	virtual void NativeConstruct() override;
-	
+	virtual void NativeDestruct() override;
+
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
 protected:
@@ -154,4 +159,5 @@ private:
 	void BindButtons();
 	void ExchangeButtonStyle();
 	void RefreshSampleMaterial();
+	void RefreshSampleClarity();
 };

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "ArknightsGuess/Operators/OperatorTypes.h"
 #include "GameFramework/GameMode.h"
 #include "GuessGameModeBase.generated.h"
@@ -18,20 +19,16 @@ class ARKNIGHTSGUESS_API AGuessGameModeBase : public AGameMode
 	UPROPERTY()
 	FOperatorData CorrectAnswer;
 protected:
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<UUserWidget> MainUIClass;
 	
-	UPROPERTY(BlueprintReadWrite)
-	TObjectPtr<UUserWidget> MainUIWidget;
 
 public:
-	virtual void BeginPlay() override;
 
 	// ---- Round flow (server-only, called by PlayerController RPCs) ----
+	void StartGame(const FGameplayTag& Mode);
+	void EndGame();
 	void StartNewRound();
 	void ProcessGuess(const FName& OperatorName);
 
 protected:
 	void SetRoundState(EGuessRoundState NewState) const;
-	UOperatorSubsystem* GetOperatorSubsystem() const;
 };

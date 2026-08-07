@@ -58,6 +58,11 @@ void UDevNotificationSubsystem::ShowNotification(const FString& Body)
 	}
 	
 	// Broadcast — UI binds here to drive the entry widget's text
+	if (NotificationEntry)
+	{
+		NotificationEntry->RemoveFromParent();
+		NotificationEntry->AddToViewport();
+	}
 	OnShowNotification.Broadcast(Body);
 
 	// Auto-dismiss after settings duration

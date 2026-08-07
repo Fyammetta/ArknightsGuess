@@ -34,5 +34,7 @@ protected:
 	UTextBlock* Hint;
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	TMap<FName, FHintColorPair> ColorMap;
+	TMap<FString, FHintColorPair> ColorMap;
+public:
+	void SetUpTextUnit(const FString& Info);
 };

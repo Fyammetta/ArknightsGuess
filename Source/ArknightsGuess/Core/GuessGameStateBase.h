@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "GameFramework/GameState.h"
 #include "ArknightsGuess/Operators/OperatorTypes.h"
 #include "GuessGameStateBase.generated.h"
@@ -36,6 +37,13 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	int32 GetGuessCount() const;
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_StartGame(const FGameplayTag& Mode);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_EndGame();
+
 
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_SetupOperator(const FOperatorImage& Tex, const TArray<FString>& Hints);

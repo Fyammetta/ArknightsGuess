@@ -2,20 +2,32 @@
 
 
 #include "GuessHudBase.h"
-
+#include "Animation/UMGSequencePlayer.h"
 #include "OperatorNameObject.h"
 #include "ArknightsGuess/Core/GuesserPlayerController.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
 #include "ArknightsGuess/Operators/OperatorUISettings.h"
+#include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/EditableText.h"
 #include "Components/ListView.h"
+#include "DevNotification/Public/DevNotificationSubsystem.h"
+#include "ArknightsGuess.h"
 
 
 void UGuessHudBase::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	// Ensure the widget receives mouse events
+	SetVisibility(ESlateVisibility::Visible);
+	SetIsFocusable(true);
+
+	// Clear stale entries from a previous game session
+	// (NativeConstruct fires again when the cached widget is re-added to viewport)
+	AllEntries.Empty();
+
 	if (auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
 		Subsystem->OnGuessRoundStateChanged.AddUniqueDynamic(this, &UGuessHudBase::OnGuessStateChanged);
@@ -30,19 +42,89 @@ void UGuessHudBase::NativeConstruct()
 		}
 	}
 	
-	ConfirmButton->OnClicked.AddDynamic(this, &UGuessHudBase::OnAnswerConfirmed);
-	AnswerBox->OnTextChanged.AddDynamic(this, &UGuessHudBase::TryRetrieveAnswer);
+	ConfirmButton->OnClicked.AddUniqueDynamic(this, &UGuessHudBase::OnAnswerConfirmed);
+	QuitButton->OnClicked.AddUniqueDynamic(this, &UGuessHudBase::OnTryingQuit);
+	ConfirmQuitButton->OnClicked.AddUniqueDynamic(this, &UGuessHudBase::OnQuitConfirmed);
+	CancelQuitButton->OnClicked.AddUniqueDynamic(this, &UGuessHudBase::OnQuitCanceled);
+	MusicSettingButton->OnClicked.AddUniqueDynamic(this, &UGuessHudBase::OnMusicSettingClicked);
+	AnswerBox->OnTextChanged.AddUniqueDynamic(this, &UGuessHudBase::TryRetrieveAnswer);
 	OperatorList->SetVisibility(ESlateVisibility::Collapsed);
+
+}
+
+void UGuessHudBase::NativeDestruct()
+{
+	if (auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
+	{
+		Subsystem->OnGuessRoundStateChanged.RemoveDynamic(this, &UGuessHudBase::OnGuessStateChanged);
+	}
+
+	Super::NativeDestruct();
+}
+
+FReply UGuessHudBase::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (bTryingQuit)
+	{
+		if (QuitUI->GetCachedGeometry().IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
+			return FReply::Unhandled();
+		
+		OnQuitCanceled();
+		return FReply::Handled();
+	}
 	
+	if (bPreparedForNext)
+	{
+		if (auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr)
+			PC->RequestNextRound();
+	}
+	
+	return FReply::Unhandled();
+}
+
+void UGuessHudBase::OnMusicSettingClicked()
+{
+	if (auto Subsystem = GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
+	{
+		Subsystem->ShowNotificationTemplate(EDevNotificationTemplate::UnderDevelopment);
+	}
 }
 
 void UGuessHudBase::OnAnswerConfirmed()
 {
+	UE_LOG(LogArknights, Log, TEXT("[HUD] OnAnswerConfirmed | Text=%s"), *AnswerBox->GetText().ToString());
 	auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr;
 	auto Answer = FName(AnswerBox->GetText().ToString());
-	if (!PC) return;
+	if (!PC) { UE_LOG(LogArknights, Warning, TEXT("[HUD] OnAnswerConfirmed failed: no PlayerController")); return; }
 
 	PC->ConfirmAnswer(Answer);
+}
+
+void UGuessHudBase::OnTryingQuit()
+{
+	UE_LOG(LogArknights, Log, TEXT("[HUD] OnTryingQuit"));
+	PlayAnimationForward(CallQuitUI);
+	bTryingQuit = true;
+}
+
+void UGuessHudBase::OnQuitConfirmed()
+{
+	UE_LOG(LogArknights, Log, TEXT("[HUD] OnQuitConfirmed -> EndGame"));
+	TWeakObjectPtr<AGuesserPlayerController> PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr;
+	PlayAnimation(CallQuitUI,1,1,EUMGSequencePlayMode::Reverse)->OnSequenceFinishedPlaying().AddWeakLambda(this,
+		[PC](UUMGSequencePlayer&)
+		{		
+			if (PC.IsValid())
+				PC->EndGame();
+		});
+}
+
+void UGuessHudBase::OnQuitCanceled()
+{
+	UE_LOG(LogArknights, Log, TEXT("[HUD] OnQuitCanceled"));
+	PlayAnimationReverse(CallQuitUI);
+	bTryingQuit = false;
+
 }
 
 void UGuessHudBase::TryRetrieveAnswer(const FText& Text)
@@ -69,12 +151,12 @@ void UGuessHudBase::TryRetrieveAnswer(const FText& Text)
 	}
 	OperatorList->SetListItems(Matching);
 	OperatorList->RegenerateAllEntries();
-	
-
 }
 
 void UGuessHudBase::OnGuessStateChanged(EGuessRoundState State)
 {
+	UE_LOG(LogArknights, Log, TEXT("[HUD] OnGuessStateChanged | State=%d"), static_cast<int32>(State));
+	bPreparedForNext = State == EGuessRoundState::Reveal || State == EGuessRoundState::Verify;
 }
 
 void UGuessHudBase::ConfirmFromList(const FName& Operator)

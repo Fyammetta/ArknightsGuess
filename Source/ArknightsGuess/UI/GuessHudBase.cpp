@@ -77,8 +77,6 @@ FReply UGuessHudBase::NativeOnMouseButtonDown(const FGeometry& InGeometry, const
 	{
 		if (auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr)
 			PC->RequestNextRound();
-		
-		AnswerBox->SetText(FText::GetEmpty());
 	}
 	
 	return FReply::Unhandled();
@@ -95,10 +93,23 @@ void UGuessHudBase::OnMusicSettingClicked()
 void UGuessHudBase::OnAnswerConfirmed()
 {
 	UE_LOG(LogArknights, Log, TEXT("[HUD] OnAnswerConfirmed | Text=%s"), *AnswerBox->GetText().ToString());
+
+	// 输入框内容为空时，弹出提示并阻止确认
+	const FString TrimmedAnswer = AnswerBox->GetText().ToString().TrimStartAndEnd();
+	if (TrimmedAnswer.IsEmpty())
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[HUD] OnAnswerConfirmed blocked: empty input"));
+		if (auto Notification = GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
+		{
+			Notification->ShowNotification(TEXT("请先输入干员名称再确认"));
+		}
+		return;
+	}
+
 	auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr;
 	auto Answer = FName(AnswerBox->GetText().ToString());
 	if (!PC) { UE_LOG(LogArknights, Warning, TEXT("[HUD] OnAnswerConfirmed failed: no PlayerController")); return; }
-	
+
 	AnswerBox->SetText(FText::GetEmpty());
 	PC->ConfirmAnswer(Answer);
 }

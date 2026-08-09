@@ -7,8 +7,8 @@
 #include "Operators/OperatorTypes.h"
 #include "OperatorImgUnit.generated.h"
 
+class UVerticalBox;
 struct FOperatorImage;
-class UWrapBox;
 class UImage;
 /**
  * 
@@ -23,7 +23,7 @@ protected:
 	UImage* Image;
 	
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	UWrapBox* HintBox;
+	UVerticalBox* HintBox;
 	
 	virtual void NativeConstruct() override;
 	

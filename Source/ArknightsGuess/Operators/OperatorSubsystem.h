@@ -95,7 +95,7 @@ public:
 	bool IsRunningOnServer() const;
 
 	// ---- Net sync helpers (no server guard, called from PC NetMulticast) ----
-	void NetSync_DefaultLevel(int32 Level);
+void NetSync_DefaultLevel(int32 Level);
 	void NetSync_ShuffleLimit(int32 Limit);
 	void NetSync_MaxGuessCount(int32 Count);
 	void NetSync_HintFrequency(int32 Freq);

@@ -24,8 +24,7 @@ void AGuesserPlayerController::StartGame_Implementation(const FGameplayTag& Mode
 	//    HasAuthority() guard in NetMulticast_StartGame prevents double-init on server.
 	GM->StartGame(Mode);
 
-	// 2. Start the server Subsystem — broadcasts OnGuessGameStart, which triggers
-	//    PC::OnGameStart → show Loading → RequestNextRound → GM::StartNewRound()
+	// 2. Start the server Subsystem — broadcasts OnGuessGameStart
 	Subsystem->StartUp(Mode);
 
 	// 3. Sync gameplay settings to the owning client's Subsystem
@@ -106,7 +105,10 @@ void AGuesserPlayerController::OnGameStart()
 		}
 	}
 	
-	RequestNextRound();
+	// Show the GameHUD after minimum loading time — the player clicks to start the first round
+	const float MinTime = UUIManagerSettings::Get()->MinLoadingTime;
+	GetWorld()->GetTimerManager().SetTimer(
+		LoadingTimerHandle, this, &AGuesserPlayerController::FinishLoading, MinTime, false);
 }
 
 void AGuesserPlayerController::OnGameEnd()

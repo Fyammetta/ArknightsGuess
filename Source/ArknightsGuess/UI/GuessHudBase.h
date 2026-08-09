@@ -28,7 +28,7 @@ class ARKNIGHTSGUESS_API UGuessHudBase : public UUserWidget
 	
 	bool bMusicSettingsExpanded;
 	
-	bool bPreparedForNext;
+	bool bPreparedForNext = true;
 protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UOperatorImgUnit* Unit;

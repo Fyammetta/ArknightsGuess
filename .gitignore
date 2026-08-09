@@ -8,3 +8,8 @@ Binaries
 .idea
 ArknightsGuess.uproject.DotSettings.user
 Docs
+Build
+AndroidPackaging诊断报告.md
+PackagedGame诊断报告.md
+Win64启动问题诊断.md
+output.png

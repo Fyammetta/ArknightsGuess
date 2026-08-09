@@ -20,8 +20,19 @@
 
 namespace GameModeTags
 {
-	static const FGameplayTag Mosaic = FGameplayTag::RequestGameplayTag("GameMode.Mosaic");
-	static const FGameplayTag Part   = FGameplayTag::RequestGameplayTag("GameMode.Part");
+	// Use lazy initialization via function-local statics to avoid static init order issues.
+	// FGameplayTag::RequestGameplayTag requires UGameplayTagsManager which is not available
+	// during dlopen() on Android — this causes a native crash in call_constructors.
+	inline const FGameplayTag& Mosaic()
+	{
+		static const FGameplayTag Tag = FGameplayTag::RequestGameplayTag("GameMode.Mosaic");
+		return Tag;
+	}
+	inline const FGameplayTag& Part()
+	{
+		static const FGameplayTag Tag = FGameplayTag::RequestGameplayTag("GameMode.Part");
+		return Tag;
+	}
 }
 
 
@@ -31,7 +42,7 @@ void UGameMainUI::NativeConstruct()
 
 	if (!GameMode.IsValid())
 	{
-		GameMode = GameModeTags::Mosaic;
+		GameMode = GameModeTags::Mosaic();
 	}
 
 	BindSliders();
@@ -79,7 +90,7 @@ void UGameMainUI::NativeDestruct()
 FReply UGameMainUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	// ---- Sample image click: toggle gameplay / actual level (Mosaic only) ----
-	if (SampleImage && GameMode == GameModeTags::Mosaic)
+	if (SampleImage && GameMode == GameModeTags::Mosaic())
 	{
 		const FGeometry& SampleGeo = SampleImage->GetCachedGeometry();
 		if (SampleGeo.IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
@@ -239,8 +250,8 @@ void UGameMainUI::OnMultiPlayClicked()
 
 void UGameMainUI::OnMosaicModeClicked()
 {
-	if (GameMode == GameModeTags::Mosaic) return;
-	GameMode = GameModeTags::Mosaic;
+	if (GameMode == GameModeTags::Mosaic()) return;
+	GameMode = GameModeTags::Mosaic();
 
 	ExchangeButtonStyle();
 	RefreshSampleClarity();
@@ -249,8 +260,8 @@ void UGameMainUI::OnMosaicModeClicked()
 
 void UGameMainUI::OnPartModeClicked()
 {
-	if (GameMode == GameModeTags::Part) return;
-	GameMode = GameModeTags::Part;
+	if (GameMode == GameModeTags::Part()) return;
+	GameMode = GameModeTags::Part();
 
 	ExchangeButtonStyle();
 	FVector Detail = FVector(0,0,1);
@@ -277,7 +288,7 @@ void UGameMainUI::OnStartGameClicked()
 	UE_LOG(LogArknights, Log, TEXT("[MainUI] OnStartGameClicked | Mode=%s"), *GameMode.ToString());
 	if (!GetWorld()) { UE_LOG(LogArknights, Warning, TEXT("[MainUI] OnStartGameClicked failed: no World")); return; }
 
-	if (GameMode != GameModeTags::Mosaic)
+	if (GameMode != GameModeTags::Mosaic())
 	{
 		if (auto Subsystem = GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
 			Subsystem->ShowNotificationTemplate(EDevNotificationTemplate::NotImplemented);

@@ -9,18 +9,6 @@
 class UImage;
 class UTextBlock;
 
-USTRUCT(BlueprintType)
-struct FHintColorPair
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditDefaultsOnly)
-	FLinearColor Text;
-
-	UPROPERTY(EditDefaultsOnly)
-	FLinearColor Background;
-};
-
 UCLASS()
 class ARKNIGHTSGUESS_API UHintTextUnit : public UUserWidget
 {
@@ -32,9 +20,17 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UTextBlock* Hint;
+	
 
 	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
-	TMap<FString, FHintColorPair> ColorMap;
+	TMap<FString, FLinearColor> ColorMap;
+	
+	FString Type;
+	
+	FString Text;
 public:
 	void SetUpTextUnit(const FString& Info);
+	
+	virtual void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
 };

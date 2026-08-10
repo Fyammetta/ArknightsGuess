@@ -17,6 +17,7 @@
 #include "Components/WidgetSwitcher.h"
 #include "DevNotification/Public/DevNotificationSubsystem.h"
 #include "ArknightsGuess.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 namespace GameModeTags
 {
@@ -147,16 +148,16 @@ void UGameMainUI::BindSliders()
 
 void UGameMainUI::BindButtons()
 {
-	if (SoloPlayButton)
-		SoloPlayButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnSoloPlayClicked);
-	if (MultiPlayButton)
-		MultiPlayButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnMultiPlayClicked);
-	if (MosaicModeButton)
-		MosaicModeButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnMosaicModeClicked);
-	if (PartModeButton)
-		PartModeButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnPartModeClicked);
-	if (StartGameButton)
-		StartGameButton->OnClicked.AddUniqueDynamic(this, &UGameMainUI::OnStartGameClicked);
+#define ONCLICK(Button,Event)\
+	if (Button)\
+		Button->OnClicked.AddUniqueDynamic(this, &UGameMainUI::Event);
+	ONCLICK(SoloPlayButton,OnSoloPlayClicked);
+	ONCLICK(MultiPlayButton,OnMultiPlayClicked);
+	ONCLICK(MosaicModeButton,OnMosaicModeClicked);
+	ONCLICK(PartModeButton,OnPartModeClicked);
+	ONCLICK(StartGameButton,OnStartGameClicked);
+	ONCLICK(QuitGameButton,OnQuitGameClicked);
+		
 }
 
 void UGameMainUI::ExchangeButtonStyle()
@@ -302,5 +303,19 @@ void UGameMainUI::OnStartGameClicked()
 			if (PC.IsValid())
 				PC->StartGame(Mode);
 		});
+
+}
+
+void UGameMainUI::OnQuitGameClicked()
+{
+	UE_LOG(LogArknights, Log, TEXT("[MainUI] OnQuitGameClicked"));
+	
+	if (auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr)
+	{
+		UKismetSystemLibrary::QuitGame(this, GetWorld()->GetFirstPlayerController(),EQuitPreference::Type::Quit,false);
+		return;
+	}
+	UE_LOG(LogArknights, Error, TEXT("[MainUI] Fail to quit game, FORCE QUIT"));
+	GEngine->DeferredCommands.Add(TEXT("quit"));
 
 }

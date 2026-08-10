@@ -70,7 +70,7 @@ void AGuessGameModeBase::ProcessGuess(const FName& OperatorName)
 		return;
 	}
 
-	if (OperatorName == CorrectAnswer.Name)
+	if (OperatorName == CorrectAnswer.Name.RealName)
 	{
 		SetRoundState(EGuessRoundState::Verify);
 	}

@@ -52,12 +52,22 @@ void UOperatorSubsystem::StartUp(const FGameplayTag& Mode)
 		{
 			SpareOperators.Empty();
 			DataTable->ForeachRow<FOperatorDataRow>(TEXT("OperatorSubsystem::StartUp"),
-				[&List = SpareOperators](const FName& RowName, const FOperatorDataRow& Row)
+				[&List = SpareOperators, &Set = OperatorNames](const FName& RowName, const FOperatorDataRow& Row)
 				{
 					List.Append(FOperatorData::MakeFromDataRow(RowName, Row));
+					Set.Add(FOperatorNamePair(RowName, Row.AvailableNames));
+
 				});
 		}
-		OperatorNames.Append(DataTable->GetRowNames());
+		else
+		{
+			OperatorNames.Empty();
+			DataTable->ForeachRow<FOperatorDataRow>(TEXT("OperatorSubsystem::StartUp"),
+				[&List = OperatorNames](const FName& RowName, const FOperatorDataRow& Row)
+				{
+					List.Add(FOperatorNamePair(RowName, Row.AvailableNames));
+				});
+		}
 	}
 
 	GuessMode = Mode;
@@ -76,7 +86,7 @@ void UOperatorSubsystem::EndGame()
 	OnGuessGameEnd.Broadcast();
 }
 
-TSet<FName> UOperatorSubsystem::GetAllOperatorNames() const
+TSet<FOperatorNamePair> UOperatorSubsystem::GetAllOperatorNames() const
 {
 	return OperatorNames;
 }

@@ -7,7 +7,6 @@
 #include "ArknightsGuess/Core/GuesserPlayerController.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
-#include "ArknightsGuess/Operators/OperatorUISettings.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/EditableText.h"
@@ -34,9 +33,9 @@ void UGuessHudBase::NativeConstruct()
 
 		auto Names = Subsystem->GetAllOperatorNames();
 		AllEntries.Reserve(Names.Num());
-		for (const FName& ItElement : Names)
+		for (const auto& ItElement : Names)
 		{
-			auto Object = NewObject<UOperatorNameObject>(this, ItElement);
+			auto Object = NewObject<UOperatorNameObject>(this, ItElement.RealName);
 			Object->Init(ItElement, OnPlayerInputAnswer).BindUObject(this, &UGuessHudBase::ConfirmFromList);
 			AllEntries.Add(Object);
 		}
@@ -48,8 +47,9 @@ void UGuessHudBase::NativeConstruct()
 	CancelQuitButton->OnClicked.AddUniqueDynamic(this, &UGuessHudBase::OnQuitCanceled);
 	MusicSettingButton->OnClicked.AddUniqueDynamic(this, &UGuessHudBase::OnMusicSettingClicked);
 	AnswerBox->OnTextChanged.AddUniqueDynamic(this, &UGuessHudBase::TryRetrieveAnswer);
+	DisplayAllButton->OnClicked.AddUniqueDynamic(this, &UGuessHudBase::ShowAllOperators);
 	OperatorList->SetVisibility(ESlateVisibility::Collapsed);
-
+	bPreparedForNext = true;
 }
 
 void UGuessHudBase::NativeDestruct()
@@ -96,6 +96,7 @@ void UGuessHudBase::OnAnswerConfirmed()
 
 	// 输入框内容为空时，弹出提示并阻止确认
 	const FString TrimmedAnswer = AnswerBox->GetText().ToString().TrimStartAndEnd();
+
 	if (TrimmedAnswer.IsEmpty())
 	{
 		UE_LOG(LogArknights, Warning, TEXT("[HUD] OnAnswerConfirmed blocked: empty input"));
@@ -105,11 +106,27 @@ void UGuessHudBase::OnAnswerConfirmed()
 		}
 		return;
 	}
+	
+	if (auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[HUD] OnAnswerConfirmed blocked: illegal input"));
+
+		if (!Subsystem->GetAllOperatorNames().Contains(FOperatorNamePair(FName(TrimmedAnswer),{})))
+		{
+			if (auto Notification = GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
+			{
+				Notification->ShowNotification(TEXT("请先输入完整的干员名称或点击选项后再确认"));
+			}
+			return;
+		}
+	}
+
 
 	auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr;
 	auto Answer = FName(AnswerBox->GetText().ToString());
 	if (!PC) { UE_LOG(LogArknights, Warning, TEXT("[HUD] OnAnswerConfirmed failed: no PlayerController")); return; }
 
+	OperatorList->SetVisibility(ESlateVisibility::Collapsed);
 	AnswerBox->SetText(FText::GetEmpty());
 	PC->ConfirmAnswer(Answer);
 }
@@ -141,19 +158,32 @@ void UGuessHudBase::OnQuitCanceled()
 
 }
 
+void UGuessHudBase::ShowAllOperators()
+{
+	if (OperatorList->IsVisible())
+	{
+		OperatorList->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	else
+	{
+		OperatorList->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		OnPlayerInputAnswer.Broadcast(FText::FromString(TEXT("*")));
+		RefreshOperatorList();
+	}
+}
+
 void UGuessHudBase::TryRetrieveAnswer(const FText& Text)
 {
-	if (bConfirmedFromList)
-	{
-		bConfirmedFromList = false;
-		return;
-	}
-	
 	if (!OperatorList->IsVisible())
 		OperatorList->SetVisibility(ESlateVisibility::Visible);
 	
 	OnPlayerInputAnswer.Broadcast(Text);
 
+	RefreshOperatorList();
+}
+
+void UGuessHudBase::RefreshOperatorList()
+{
 	TArray<UObject*> Matching;
 	Matching.Reserve(AllEntries.Num());
 	for (const auto& Entry : AllEntries)
@@ -164,7 +194,6 @@ void UGuessHudBase::TryRetrieveAnswer(const FText& Text)
 		}
 	}
 	OperatorList->SetListItems(Matching);
-	OperatorList->RegenerateAllEntries();
 }
 
 void UGuessHudBase::OnGuessStateChanged(EGuessRoundState State)
@@ -175,7 +204,7 @@ void UGuessHudBase::OnGuessStateChanged(EGuessRoundState State)
 
 void UGuessHudBase::ConfirmFromList(const FName& Operator)
 {
-	bConfirmedFromList = true;
-	OperatorList->SetVisibility(ESlateVisibility::Collapsed);
 	AnswerBox->SetText(FText::FromName(Operator));
+
+	OperatorList->SetVisibility(ESlateVisibility::Collapsed);
 }

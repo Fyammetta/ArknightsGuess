@@ -22,13 +22,12 @@ class ARKNIGHTSGUESS_API UGuessHudBase : public UUserWidget
 {
 	GENERATED_BODY()
 	
-	bool bConfirmedFromList;
-	
 	bool bTryingQuit;
 	
 	bool bMusicSettingsExpanded;
 	
-	bool bPreparedForNext = true;
+	bool bPreparedForNext;
+
 protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UOperatorImgUnit* Unit;
@@ -53,6 +52,9 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UButton* CancelQuitButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UButton* DisplayAllButton;
 		
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UBorder* QuitUI;
@@ -86,6 +88,9 @@ private:
 	
 	UFUNCTION()
 	void OnQuitCanceled();
+	
+	UFUNCTION()
+	void ShowAllOperators();
 
 	UFUNCTION()
 	void OnMusicSettingClicked();
@@ -97,4 +102,6 @@ private:
 	void OnGuessStateChanged(EGuessRoundState State);
 	
 	void ConfirmFromList(const FName& Operator);
+
+	void RefreshOperatorList();
 };

@@ -6,6 +6,7 @@
 #include "UObject/NoExportTypes.h"
 #include "OperatorNameObject.generated.h"
 
+struct FOperatorNamePair;
 /**
  * 
  */
@@ -20,6 +21,8 @@ class ARKNIGHTSGUESS_API UOperatorNameObject : public UObject
 	
 	FString RichText;
 	
+	FString SearchText;
+	
 	FEntryConfirmDelegate OnEntryConfirmOperator;
 public:	
 	
@@ -31,7 +34,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	bool GetShouldDisplay() const;
 	
-	FEntryConfirmDelegate& Init(const FName& Origin, TMulticastDelegate<void(const FText&)>& Delegate);
+	FEntryConfirmDelegate& Init(const FOperatorNamePair& Name, TMulticastDelegate<void(const FText&)>& Delegate);
 	
 	UFUNCTION(BlueprintCallable)
 	void OnConfirm();

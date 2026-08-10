@@ -7,15 +7,27 @@
 
 void UHintTextUnit::SetUpTextUnit(const FString& Info)
 {
-	FString HintType{};
-	FString HintText{};
+	Info.Split("/",&Type, &Text);
+	if (Type.Contains(TEXT("tag")))
+		Type = TEXT("标签");
 	
-	Info.Split("/",&HintType, &HintText);
-	
-	Hint->SetText(FText::FromString(HintText));
-	if (ColorMap.Contains(HintType))
+	Hint->SetText(FText::FromString(Text));
+	if (ColorMap.Contains(Type))
 	{
-		Hint->SetColorAndOpacity(ColorMap[HintType].Text);
-		Background->SetColorAndOpacity(ColorMap[HintType].Background);
+		Background->SetColorAndOpacity(ColorMap[Type]);
 	}
+}
+
+void UHintTextUnit::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	Super::NativeOnMouseEnter(InGeometry, InMouseEvent);
+	Hint->SetText(FText::FromString(Type));
+
+}
+
+void UHintTextUnit::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
+{
+	Super::NativeOnMouseLeave(InMouseEvent);
+	Hint->SetText(FText::FromString(Text));
+
 }

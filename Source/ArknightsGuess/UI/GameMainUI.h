@@ -79,9 +79,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UButton> StartGameButton;
 	
-	// ---- Start Button Text ----
+	// ---- Quit Button ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<UTextBlock>	StartGameText;
+	TObjectPtr<UButton> QuitGameButton;
 	
 
 	// ---- Sample image ----
@@ -149,6 +149,9 @@ protected:
 
 	UFUNCTION()
 	void OnStartGameClicked();
+	
+	UFUNCTION()
+	void OnQuitGameClicked();
 
 	// ---- ComboBox callbacks ----
 	UFUNCTION()

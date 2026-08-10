@@ -15,7 +15,7 @@ void UOperatorImgUnit::NativeConstruct()
 {
 	Super::NativeConstruct();
 	
-	SetVisibility(ESlateVisibility::Collapsed);
+	Image->SetVisibility(ESlateVisibility::Collapsed);
 
 	if (auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
@@ -50,7 +50,7 @@ void UOperatorImgUnit::SetupUnit(const FOperatorImage& Img, const TArray<FString
 		}
 	}
 
-	SetVisibility(ESlateVisibility::Visible);
+	Image->SetVisibility(ESlateVisibility::Visible);
 }
 
 void UOperatorImgUnit::OnCallClarify(int32 Round, int32 Level)
@@ -75,7 +75,7 @@ void UOperatorImgUnit::OnShowNextHint()
 	{
 		if (auto Hint = Cast<UHintTextUnit>(Children[CurrentHintIndex]))
 		{
-			Hint->SetVisibility(ESlateVisibility::HitTestInvisible);
+			Hint->SetVisibility(ESlateVisibility::Visible);
 		}
 		CurrentHintIndex++;
 	}

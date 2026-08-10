@@ -40,25 +40,56 @@ struct FOperatorDataRow : public FTableRowBase
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	TMap<FName, FString> Info;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TArray<FName> AvailableNames;
+};
+
+USTRUCT(BlueprintType)
+struct FOperatorNamePair
+{
+	
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FName RealName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FString SearchName;
+	FOperatorNamePair() : RealName(NAME_None), SearchName(TEXT("")) {}
+	
+	FOperatorNamePair(const FName& Name, const TArray<FName>& AvailableNames);
+
+	friend uint32 GetTypeHash(const FOperatorNamePair& Pair)
+	{
+		return GetTypeHash(Pair.RealName);
+	}
+	
+	friend bool operator==(const FOperatorNamePair& A, const FOperatorNamePair& B)
+	{
+		return A.RealName == B.RealName;
+	}
 };
 
 USTRUCT(BlueprintType)
 struct FOperatorData
 {
 	GENERATED_BODY()
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName Name;
+	FOperatorNamePair Name;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FOperatorImage Image;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	TMap<FName, FString> Info;
-
-
+	
 	static TArray<FOperatorData> MakeFromDataRow(const FName& RowName, const FOperatorDataRow& Row);
+	
+	FOperatorData() : Name(NAME_None,{}), Image(FOperatorImage()), Info({}){};
 };
+
 
 // ---- FastArray: tried-answer list replicated to clients ----
 USTRUCT()

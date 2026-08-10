@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "OperatorTypes.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "OperatorSubsystem.generated.h"
 
@@ -29,7 +30,7 @@ class ARKNIGHTSGUESS_API UOperatorSubsystem : public UGameInstanceSubsystem
 
 	TArray<FOperatorData> SpareOperators;
 	TArray<FOperatorData> UsedOperators;
-	TSet<FName> OperatorNames;
+	TSet<FOperatorNamePair> OperatorNames;
 
 	FGameplayTag GuessMode;
 	int32 DefaultLevel;
@@ -60,7 +61,7 @@ public:
 	void EndGame();
 
 	UFUNCTION(BlueprintCallable)
-	TSet<FName> GetAllOperatorNames() const;
+	TSet<FOperatorNamePair> GetAllOperatorNames() const;
 
 	UMaterialInstanceDynamic* GetDynamicMaterial();
 

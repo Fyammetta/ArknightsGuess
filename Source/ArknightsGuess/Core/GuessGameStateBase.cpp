@@ -107,7 +107,7 @@ void AGuessGameStateBase::OnRep_NextRound()
 
 void AGuessGameStateBase::EnterNewRound(const FOperatorData& Operator)
 {
-	UE_LOG(LogArknights, Log, TEXT("[GS] EnterNewRound | Answer=%s | Authority=%d"), *Operator.Name.ToString(), HasAuthority());
+	UE_LOG(LogArknights, Log, TEXT("[GS] EnterNewRound | Answer=%s | Authority=%d"), *Operator.Name.RealName.ToString(), HasAuthority());
 	if (!HasAuthority()) return;
 
 	auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this);

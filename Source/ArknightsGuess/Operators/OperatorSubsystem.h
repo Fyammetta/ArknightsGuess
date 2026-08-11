@@ -16,6 +16,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FGuessProcessChangeDelegate, int32,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGuessGameStartDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FGuessGameEndDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDisplayNextHintsDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGameSettingChangedDelegate, FGameplayTag, SettingTag, const FString&, NewValue);
 
 UCLASS()
 class ARKNIGHTSGUESS_API UOperatorSubsystem : public UGameInstanceSubsystem
@@ -37,6 +38,8 @@ class ARKNIGHTSGUESS_API UOperatorSubsystem : public UGameInstanceSubsystem
 	int32 ShuffleLimit;
 	int32 MaxGuessCount;
 	int32 HintFrequency;
+	
+	FVector2D MosaicOffset;
 
 	bool IsGameRunning;
 
@@ -53,6 +56,7 @@ public:
 	FGuessGameStartDelegate OnGuessGameStart;
 	FGuessGameEndDelegate OnGuessGameEnd;
 	FDisplayNextHintsDelegate OnNextHintsDisplayAllowed;
+	FOnGameSettingChangedDelegate OnGameSettingChanged;
 
 	UFUNCTION(BlueprintCallable)
 	void StartUp(const FGameplayTag& Mode);
@@ -91,6 +95,9 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	FOperatorData GetRandomOperatorData();
+	
+	UFUNCTION(BlueprintCallable)
+	FGameplayTag GetGameplayMode() const;
 
 	UFUNCTION(BlueprintCallable)
 	bool IsRunningOnServer() const;

@@ -3,62 +3,59 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "DefaultGameStateBase.h"
 #include "GameplayTagContainer.h"
-#include "GameFramework/GameState.h"
-#include "ArknightsGuess/Operators/OperatorTypes.h"
 #include "GuessGameStateBase.generated.h"
 
+UENUM()
+enum EPlayerChangeType
+{
+	Join,
+	Leave
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayerCountChangedDelegate, APlayerController*, Player, EPlayerChangeType, Type);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerOnReadyDelegate, APlayerController*, Player, bool , bReady, const FGameplayTag&, Message);
+
+
+/**
+ * RPC / flow-control layer — player tracking, game-lifecycle Multicast RPCs,
+ * and round orchestration (EnterNewRound / Clarify).
+ *
+ * Data properties and accessors live in ADefaultGameStateBase.
+ */
 UCLASS()
-class ARKNIGHTSGUESS_API AGuessGameStateBase : public AGameState
+class ARKNIGHTSGUESS_API AGuessGameStateBase : public ADefaultGameStateBase
 {
 	GENERATED_BODY()
 
-protected:
-	UPROPERTY(ReplicatedUsing = "OnRep_OnGuessStateChanged", BlueprintReadOnly)
-	EGuessRoundState RoundState = EGuessRoundState::WaitingForPlayers;
-
-	UPROPERTY(ReplicatedUsing = "OnRep_NextLevel", BlueprintReadOnly)
-	int32 GuessCount = 0;
-
-	UPROPERTY(ReplicatedUsing = "OnRep_NextRound", BlueprintReadOnly)
-	int32 RoundNumber = 0;
-	
-	UPROPERTY(Replicated)
-	FTriedAnswerArray TriedAnswers;
-
 public:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	UPROPERTY(BlueprintAssignable)
+	FPlayerCountChangedDelegate OnPlayerCountChanged;
 
-	UFUNCTION(BlueprintCallable)
-	EGuessRoundState GetGuessRoundState() const;
-
-	UFUNCTION(BlueprintCallable)
-	void SetGuessRoundState(EGuessRoundState State);
-
-	UFUNCTION(BlueprintCallable)
-	int32 GetGuessCount() const;
+	UPROPERTY(BlueprintAssignable)
+	FPlayerOnReadyDelegate WhenPlayerOnReady;
 	
+	virtual void AddPlayerState(APlayerState* PlayerState) override;
+	virtual void RemovePlayerState(APlayerState* PlayerState) override;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_BroadcastPlayerCountChanged(APlayerController* Player, EPlayerChangeType Type);
+
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_StartGame(const FGameplayTag& Mode);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_EndGame();
 
-
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_SetupOperator(const FOperatorImage& Tex, const TArray<FString>& Hints);
-	
+
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_DisplayNextHint();
 	
-	UFUNCTION()
-	void OnRep_OnGuessStateChanged();
-	
-	UFUNCTION()
-	void OnRep_NextLevel();
-
-	UFUNCTION()
-	void OnRep_NextRound();
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_BroadcastOnPlayerReady(APlayerController* Player, bool bReady, const FGameplayTag& Message);
 
 	void EnterNewRound(const FOperatorData& Operator);
 	void Clarify();

@@ -18,7 +18,13 @@ class ARKNIGHTSGUESS_API AGuessGameModeBase : public AGameMode
 
 	UPROPERTY()
 	FOperatorData CorrectAnswer;
+	
+	UPROPERTY()
+	TSet<APlayerController*> ReadyPlayers;
 protected:
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+	
+	virtual void Logout(AController* Exiting) override;
 	
 
 public:
@@ -26,9 +32,13 @@ public:
 	// ---- Round flow (server-only, called by PlayerController RPCs) ----
 	void StartGame(const FGameplayTag& Mode);
 	void EndGame();
-	void StartNewRound();
+	void TryStartNewRound(APlayerController* Player);
 	void ProcessGuess(const FName& OperatorName);
+	
+	int32 GetReadyPlayerCount() const;
 
 protected:
 	void SetRoundState(EGuessRoundState NewState) const;
+	void StartNewRound();
+
 };

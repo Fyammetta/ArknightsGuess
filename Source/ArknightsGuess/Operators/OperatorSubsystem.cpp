@@ -3,6 +3,7 @@
 #include "OperatorSubsystem.h"
 #include "OperatorTypes.h"
 #include "OperatorUISettings.h"
+#include "ArknightsGuess/GuessGame/GuessGameSettings.h"
 #include "ArknightsGuess/Core/GuessGameStateBase.h"
 #include "ArknightsGuess.h"
 
@@ -26,7 +27,7 @@ void UOperatorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	SpareOperators.Empty();
 	IsGameRunning = false;
 
-	if (auto Settings = UOperatorUISettings::Get())
+	if (auto Settings = UGuessGameSettings::Get())
 	{
 		ShuffleLimit = Settings->ShuffleLimit;
 		MaxGuessCount = Settings->MaxGuessCount;
@@ -175,24 +176,33 @@ FOperatorData UOperatorSubsystem::GetRandomOperatorData()
 	return Data;
 }
 
+FGameplayTag UOperatorSubsystem::GetGameplayMode() const
+{
+	return GuessMode;
+}
+
 void UOperatorSubsystem::NetSync_DefaultLevel(int32 Level)
 {
 	DefaultLevel = Level;
+	OnGameSettingChanged.Broadcast(FGameplayTag::RequestGameplayTag("Settings.DefaultLevel"), FString::FromInt(Level));
 }
 
 void UOperatorSubsystem::NetSync_ShuffleLimit(int32 Limit)
 {
 	ShuffleLimit = Limit;
+	OnGameSettingChanged.Broadcast(FGameplayTag::RequestGameplayTag("Settings.ShuffleLimit"), FString::FromInt(Limit));
 }
 
 void UOperatorSubsystem::NetSync_MaxGuessCount(int32 Count)
 {
 	MaxGuessCount = Count;
+	OnGameSettingChanged.Broadcast(FGameplayTag::RequestGameplayTag("Settings.MaxGuessCount"), FString::FromInt(Count));
 }
 
 void UOperatorSubsystem::NetSync_HintFrequency(int32 Freq)
 {
 	HintFrequency = Freq;
+	OnGameSettingChanged.Broadcast(FGameplayTag::RequestGameplayTag("Settings.HintFrequency"), FString::FromInt(Freq));
 }
 
 bool UOperatorSubsystem::IsRunningOnServer() const

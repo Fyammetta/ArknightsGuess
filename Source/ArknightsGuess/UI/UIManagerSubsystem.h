@@ -38,23 +38,23 @@ public:
 	 * Returns the widget instance, or nullptr on failure.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "UIManager")
-	UUserWidget* ShowUI(const FGameplayTag& Tag);
+	UUserWidget* ShowUI(FGameplayTag Tag);
 
 	/** Hides the widget by removing it from the viewport. Does NOT destroy the instance. */
 	UFUNCTION(BlueprintCallable, Category = "UIManager")
-	void HideUI(const FGameplayTag& Tag);
+	void HideUI(FGameplayTag Tag);
 
 	/** Hides and destroys the cached instance. Next ShowUI will re-create it. */
 	UFUNCTION(BlueprintCallable, Category = "UIManager")
-	void DestroyUI(const FGameplayTag& Tag);
+	void DestroyUI(FGameplayTag Tag);
 
 	/** Returns the cached widget for Tag, or nullptr if never created / already destroyed. */
 	UFUNCTION(BlueprintCallable, Category = "UIManager")
-	UUserWidget* GetUI(const FGameplayTag& Tag) const;
+	UUserWidget* GetUI(FGameplayTag Tag) const;
 
 	/** Whether a widget is currently active (created and visible). */
 	UFUNCTION(BlueprintCallable, Category = "UIManager")
-	bool IsUIShown(const FGameplayTag& Tag) const;
+	bool IsUIShown(FGameplayTag Tag) const;
 
 	/** Hide all active UIs. */
 	UFUNCTION(BlueprintCallable, Category = "UIManager")
@@ -75,4 +75,5 @@ private:
 	/** Cached active widget instances, keyed by tag. */
 	UPROPERTY()
 	TMap<FGameplayTag, TObjectPtr<UUserWidget>> ActiveUIs;
+
 };

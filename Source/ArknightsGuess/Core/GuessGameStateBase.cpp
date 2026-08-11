@@ -2,41 +2,35 @@
 
 #include "GuessGameStateBase.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
+#include "GuessGame/UGuessComponentInterface.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
-#include "ArknightsGuess/Operators/OperatorUISettings.h"
-#include "Net/UnrealNetwork.h"
 #include "ArknightsGuess.h"
+#include "GameFramework/PlayerState.h"
 
-void AGuessGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+// ---- Player tracking ----
+
+void AGuessGameStateBase::AddPlayerState(APlayerState* PlayerState)
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME(AGuessGameStateBase, RoundState);
-	DOREPLIFETIME(AGuessGameStateBase, GuessCount);
-	DOREPLIFETIME(AGuessGameStateBase, RoundNumber);
-	DOREPLIFETIME(AGuessGameStateBase, TriedAnswers);
+	UE_LOG(LogArknights, Log, TEXT("[GS] AddPlayerState | Player=%s"), PlayerState ? *PlayerState->GetPlayerName() : TEXT("null"));
+	if (PlayerState)
+		NetMulticast_BroadcastPlayerCountChanged(PlayerState->GetPlayerController(), Join);
 }
 
-EGuessRoundState AGuessGameStateBase::GetGuessRoundState() const
+void AGuessGameStateBase::RemovePlayerState(APlayerState* PlayerState)
 {
-	return RoundState;
+	UE_LOG(LogArknights, Log, TEXT("[GS] RemovePlayerState | Player=%s"), PlayerState ? *PlayerState->GetPlayerName() : TEXT("null"));
+	if (PlayerState)
+		NetMulticast_BroadcastPlayerCountChanged(PlayerState->GetPlayerController(), Leave);
 }
 
-void AGuessGameStateBase::SetGuessRoundState(EGuessRoundState State)
+void AGuessGameStateBase::NetMulticast_BroadcastPlayerCountChanged_Implementation(APlayerController* Player, EPlayerChangeType Type)
 {
-	UE_LOG(LogArknights, Log, TEXT("[GS] SetGuessRoundState | State=%d | Authority=%d"), static_cast<int32>(State), HasAuthority());
-	RoundState = State;
-
-	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
-	{
-		Subsystem->OnGuessRoundStateChanged.Broadcast(State);
-	}
+	UE_LOG(LogArknights, Log, TEXT("[GS] NetMulticast_BroadcastPlayerCountChanged | Type=%d | Authority=%d"), static_cast<int32>(Type), HasAuthority());
+	if (Player)
+		OnPlayerCountChanged.Broadcast(Player, Type);
 }
 
-int32 AGuessGameStateBase::GetGuessCount() const
-{
-	return GuessCount;
-}
+// ---- Game lifecycle RPCs ----
 
 void AGuessGameStateBase::NetMulticast_StartGame_Implementation(const FGameplayTag& Mode)
 {
@@ -71,38 +65,18 @@ void AGuessGameStateBase::NetMulticast_SetupOperator_Implementation(const FOpera
 
 void AGuessGameStateBase::NetMulticast_DisplayNextHint_Implementation()
 {
+	UE_LOG(LogArknights, Log, TEXT("[GS] NetMulticast_DisplayNextHint | Authority=%d"), HasAuthority());
 	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
 		Subsystem->OnNextHintsDisplayAllowed.Broadcast();
 	}
 }
 
-void AGuessGameStateBase::OnRep_OnGuessStateChanged()
-{
-	UE_LOG(LogArknights, Log, TEXT("[GS] OnRep_GuessStateChanged | State=%d"), static_cast<int32>(RoundState));
-	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
-	{
-		Subsystem->OnGuessRoundStateChanged.Broadcast(RoundState);
-	}
-}
+// ---- Round orchestration ----
 
-void AGuessGameStateBase::OnRep_NextLevel()
+void AGuessGameStateBase::NetMulticast_BroadcastOnPlayerReady_Implementation(APlayerController* Player, bool bReady, const FGameplayTag& Message)
 {
-	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
-	{
-		if (Subsystem && GuessCount % UOperatorUISettings::Get()->ClarityPerLevel != 0)
-		{
-			Subsystem->OnGuessProcessChanged.Broadcast(RoundNumber, Subsystem->GetDefaultLevel() - GuessCount);
-		}
-	}
-}
-
-void AGuessGameStateBase::OnRep_NextRound()
-{
-	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
-	{
-		Subsystem->OnGuessProcessChanged.Broadcast(RoundNumber, Subsystem->GetDefaultLevel());
-	}
+	WhenPlayerOnReady.Broadcast(Player, bReady, Message);
 }
 
 void AGuessGameStateBase::EnterNewRound(const FOperatorData& Operator)
@@ -116,6 +90,11 @@ void AGuessGameStateBase::EnterNewRound(const FOperatorData& Operator)
 	RoundNumber++;
 	GuessCount = 0;
 
+	if (GuessComponent.IsValid())
+		GuessComponent->OnNewRound();
+	else
+		UE_LOG(LogArknights, Warning, TEXT("[GS] EnterNewRound: GuessComponent is invalid"));
+
 	TArray<FString> Hints;
 	for (const TPair<FName, FString>& Info : Operator.Info)
 	{
@@ -123,16 +102,11 @@ void AGuessGameStateBase::EnterNewRound(const FOperatorData& Operator)
 	}
 
 	for (int32 i = Hints.Num() - 1; i > 0; i--) {
-		int32 j = FMath::Floor(FMath::Rand() * (i + 1)) % Hints.Num();
-		auto Temp = Hints[i];
-		Hints[i] = Hints[j];
-		Hints[j] = Temp;
+		const int32 j = FMath::RandRange(0, i);
+		Hints.Swap(i, j);
 	}
 
 	NetMulticast_SetupOperator(Operator.Image, Hints);
-
-	// Direct broadcast for single-player: OnRep_NextRound won't fire without replication
-	Subsystem->OnGuessProcessChanged.Broadcast(RoundNumber, Subsystem->GetDefaultLevel());
 }
 
 void AGuessGameStateBase::Clarify()
@@ -141,15 +115,13 @@ void AGuessGameStateBase::Clarify()
 	if (!HasAuthority()) return;
 	GuessCount++;
 
-	// Direct broadcast for single-player: OnRep_NextLevel won't fire without replication
+	if (GuessComponent.IsValid())
+		GuessComponent->OnWrongGuess(GuessCount);
+	else
+		UE_LOG(LogArknights, Warning, TEXT("[GS] Clarify: GuessComponent is invalid"));
+
 	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
-		if (GuessCount % UOperatorUISettings::Get()->ClarityPerLevel != 0)
-		{
-			Subsystem->OnGuessProcessChanged.Broadcast(RoundNumber, Subsystem->GetDefaultLevel() - GuessCount);
-		}
-
-		// Show next hint every HintFrequency wrong guesses
 		if (GuessCount > 0 && GuessCount % Subsystem->GetHintFrequency() == 0)
 		{
 			NetMulticast_DisplayNextHint();

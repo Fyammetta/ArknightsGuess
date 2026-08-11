@@ -3,7 +3,7 @@
 
 #include "OperatorFunctionLibrary.h"
 #include "OperatorSubsystem.h"
-#include "OperatorUISettings.h"
+#include "ArknightsGuess/GuessGame/GuessGameSettings.h"
 #include "ArknightsGuess.h"
 #include "Engine/GameInstance.h"
 
@@ -25,7 +25,7 @@ void UOperatorFunctionLibrary::SetOperatorClarity(UMaterialInstanceDynamic* Mate
 	UE_LOG(LogArknights, Log, TEXT("[Lib] SetOperatorClarity | Clarity=%d"), Clarity);
 	if (!Material || Clarity < 0) return;
 
-	const int32 Step = UOperatorUISettings::Get()->ClarityPerLevel;
+	const int32 Step = UGuessGameSettings::Get()->ClarityPerLevel;
 
 	if (Clarity % Step == 0 && Clarity != 0)
 	{

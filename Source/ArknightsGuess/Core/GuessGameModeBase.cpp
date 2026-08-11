@@ -8,12 +8,28 @@
 #include "ArknightsGuess.h"
 
 
+void AGuessGameModeBase::PostLogin(APlayerController* NewPlayer)
+{
+	UE_LOG(LogArknights, Log, TEXT("[GM] PostLogin | Player=%s"), NewPlayer ? *NewPlayer->GetName() : TEXT("null"));
+	Super::PostLogin(NewPlayer);
+}
+
+void AGuessGameModeBase::Logout(AController* Exiting)
+{
+	UE_LOG(LogArknights, Log, TEXT("[GM] Logout | Controller=%s"), Exiting ? *Exiting->GetName() : TEXT("null"));
+	Super::Logout(Exiting);
+}
+
 void AGuessGameModeBase::StartGame(const FGameplayTag& Mode)
 {
 	UE_LOG(LogArknights, Log, TEXT("[GM] StartGame | Mode=%s"), *Mode.ToString());
 	if (AGuessGameStateBase* GS = GetGameState<AGuessGameStateBase>())
 	{
 		GS->NetMulticast_StartGame(Mode);
+	}
+	else
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[GM] StartGame failed: no GameState"));
 	}
 }
 
@@ -24,8 +40,39 @@ void AGuessGameModeBase::EndGame()
 	{
 		GS->NetMulticast_EndGame();
 	}
+	else
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[GM] EndGame failed: no GameState"));
+		return;
+	}
 
 	SetRoundState(EGuessRoundState::WaitingForPlayers);
+}
+
+void AGuessGameModeBase::TryStartNewRound(APlayerController* Player)
+{
+	UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound | Player=%s"), Player ? *Player->GetName() : TEXT("null"));
+	auto* GS = GetGameState<AGuessGameStateBase>();
+	if (!GS || !Player)
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[GM] TryStartNewRound failed: no GameState or Player"));
+		return;
+	}
+	if (ReadyPlayers.Contains(Player))
+	{
+		UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: Player already ready, waiting for others | Ready=%d/%d"), ReadyPlayers.Num(), GS->GetPlayersCount());
+		return;
+	}
+
+	ReadyPlayers.Add(Player);
+	
+	GS->NetMulticast_BroadcastOnPlayerReady(Player, true, FGameplayTag::EmptyTag);
+	UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: Player ready | Ready=%d/%d"), ReadyPlayers.Num(), GS->GetPlayersCount());
+	if (ReadyPlayers.Num() == GS->GetPlayersCount())
+	{
+		UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: all players ready, starting new round"));
+		StartNewRound();
+	}
 }
 
 void AGuessGameModeBase::StartNewRound()
@@ -88,6 +135,11 @@ void AGuessGameModeBase::ProcessGuess(const FName& OperatorName)
 			GS->Clarify();
 		}
 	}
+}
+
+int32 AGuessGameModeBase::GetReadyPlayerCount() const
+{
+	return ReadyPlayers.Num();
 }
 
 void AGuessGameModeBase::SetRoundState(EGuessRoundState NewState) const

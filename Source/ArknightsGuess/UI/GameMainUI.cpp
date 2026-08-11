@@ -4,10 +4,11 @@
 #include "GameMainUI.h"
 
 #include "Animation/UMGSequencePlayer.h"
-#include "ArknightsGuess/Core/GuesserPlayerController.h"
+#include "ArknightsGuess/Core/DefaultPlayerController.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorTypes.h"
 #include "ArknightsGuess/Operators/OperatorUISettings.h"
+#include "ArknightsGuess/GuessGame/GuessGameSettings.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/ComboBoxString.h"
@@ -17,6 +18,7 @@
 #include "Components/WidgetSwitcher.h"
 #include "DevNotification/Public/DevNotificationSubsystem.h"
 #include "ArknightsGuess.h"
+#include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 namespace GameModeTags
@@ -53,27 +55,31 @@ void UGameMainUI::NativeConstruct()
 		PartSelector->OnSelectionChanged.AddUniqueDynamic(this, &UGameMainUI::OnPartSelectionChanged);
 
 
-	// Init slider values from settings
-	if (auto* Settings = UOperatorUISettings::Get())
+	// Init slider values from rule settings
+	if (auto* RuleSettings = UGuessGameSettings::Get())
 	{
-		LevelSlider->SetValue(static_cast<float>(Settings->DefaultLevel));
-		const float ClarityStep = static_cast<float>(Settings->ClarityPerLevel);
+		LevelSlider->SetValue(static_cast<float>(RuleSettings->DefaultLevel));
+		const float ClarityStep = static_cast<float>(RuleSettings->ClarityPerLevel);
 		LevelSlider->SetStepSize(ClarityStep);
-		LevelValueText->SetText(FText::AsNumber(Settings->DefaultLevel / Settings->ClarityPerLevel));
+		LevelValueText->SetText(FText::AsNumber(RuleSettings->DefaultLevel / RuleSettings->ClarityPerLevel));
 
-		GuessCountSlider->SetValue(static_cast<float>(Settings->MaxGuessCount));
-		GuessCountValueText->SetText(FText::AsNumber(Settings->MaxGuessCount));
+		GuessCountSlider->SetValue(static_cast<float>(RuleSettings->MaxGuessCount));
+		GuessCountValueText->SetText(FText::AsNumber(RuleSettings->MaxGuessCount));
 
-		HintFreqSlider->SetValue(static_cast<float>(Settings->HintFrequency));
-		HintFreqValueText->SetText(FText::AsNumber(Settings->HintFrequency));
+		HintFreqSlider->SetValue(static_cast<float>(RuleSettings->HintFrequency));
+		HintFreqValueText->SetText(FText::AsNumber(RuleSettings->HintFrequency));
 
-		float Value = FMath::Min(Settings->ShuffleLimit, ShuffleLimitSlider->GetMaxValue());
+		float Value = FMath::Min(RuleSettings->ShuffleLimit, ShuffleLimitSlider->GetMaxValue());
 		ShuffleLimitSlider->SetValue(Value);
 		ShuffleLimitValueText->SetText(FText::AsNumber(Value));
+	}
 
-		if (SampleImage && Settings->SampleTex.IsValid())
+	// Sample image (UI config)
+	if (auto* UISettings = UOperatorUISettings::Get())
+	{
+		if (SampleImage && UISettings->SampleTex.IsValid())
 		{
-			SampleImage->GetDynamicMaterial()->SetTextureParameterValue(TEXT("Tex"),Settings->SampleTex.LoadSynchronous());
+			SampleImage->GetDynamicMaterial()->SetTextureParameterValue(TEXT("Tex"), UISettings->SampleTex.LoadSynchronous());
 		}
 	}
 }
@@ -97,7 +103,7 @@ FReply UGameMainUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const F
 		if (SampleGeo.IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
 		{
 			bShowGameplayLevel = !bShowGameplayLevel;
-			const int32 Step = UOperatorUISettings::Get()->ClarityPerLevel;
+			const int32 Step = UGuessGameSettings::Get()->ClarityPerLevel;
 			LevelSlider->SetStepSize(bShowGameplayLevel ? static_cast<float>(Step) : 1.0f);
 			if (bShowGameplayLevel)
 			{
@@ -191,7 +197,7 @@ void UGameMainUI::RefreshSampleClarity()
 {
 	if (!SampleImage || !LevelSlider) return;
 
-	const int32 Step = UOperatorUISettings::Get()->ClarityPerLevel;
+	const int32 Step = UGuessGameSettings::Get()->ClarityPerLevel;
 	const int32 RawValue = static_cast<int32>(LevelSlider->GetValue());
 
 	if (bShowGameplayLevel)
@@ -245,8 +251,11 @@ void UGameMainUI::OnSoloPlayClicked()
 
 void UGameMainUI::OnMultiPlayClicked()
 {
-	if (auto Subsystem = GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
-		Subsystem->ShowNotificationTemplate(EDevNotificationTemplate::UnderDevelopment);
+	UGameplayStatics::OpenLevel(this, TEXT("Map_MainLevel"),true, TEXT("listen"));
+	
+	SubWidgetSwitcher->SetActiveWidgetIndex(1);
+	PlayAnimationForward(ShowSettingsWidget);
+	bExpandedSettings = true;
 }
 
 void UGameMainUI::OnMosaicModeClicked()
@@ -296,7 +305,7 @@ void UGameMainUI::OnStartGameClicked()
 		return;
 	}
 
-	TWeakObjectPtr<AGuesserPlayerController> PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr;
+	TWeakObjectPtr<ADefaultPlayerController> PC = GetWorld() ? GetWorld()->GetFirstPlayerController<ADefaultPlayerController>() : nullptr;
 	PlayAnimation(ShowSettingsWidget,1,1,EUMGSequencePlayMode::Reverse)->OnSequenceFinishedPlaying().AddWeakLambda(this,
 		[PC, Mode = GameMode](UUMGSequencePlayer&)
 		{

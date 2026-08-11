@@ -28,11 +28,11 @@ UUIManagerSubsystem* UUIManagerSubsystem::Get(const UObject* WorldContextObject)
 	return GI ? GI->GetSubsystem<UUIManagerSubsystem>() : nullptr;
 }
 
-UUserWidget* UUIManagerSubsystem::ShowUI(const FGameplayTag& Tag)
+UUserWidget* UUIManagerSubsystem::ShowUI(FGameplayTag Tag)
 {
 	UE_LOG(LogArknights, Log, TEXT("[UIMgr] ShowUI | Tag=%s"), *Tag.ToString());
 	if (!Tag.IsValid()) { UE_LOG(LogArknights, Warning, TEXT("[UIMgr] ShowUI failed: invalid Tag")); return nullptr; }
-
+	
 	// ---- Already active? bring to front ----
 	if (TObjectPtr<UUserWidget>* Existing = ActiveUIs.Find(Tag))
 	{
@@ -81,7 +81,7 @@ UUserWidget* UUIManagerSubsystem::ShowUI(const FGameplayTag& Tag)
 	return Widget;
 }
 
-void UUIManagerSubsystem::HideUI(const FGameplayTag& Tag)
+void UUIManagerSubsystem::HideUI(FGameplayTag Tag)
 {
 	UE_LOG(LogArknights, Log, TEXT("[UIMgr] HideUI | Tag=%s"), *Tag.ToString());
 	if (TObjectPtr<UUserWidget>* Found = ActiveUIs.Find(Tag))
@@ -94,7 +94,7 @@ void UUIManagerSubsystem::HideUI(const FGameplayTag& Tag)
 	}
 }
 
-void UUIManagerSubsystem::DestroyUI(const FGameplayTag& Tag)
+void UUIManagerSubsystem::DestroyUI(FGameplayTag Tag)
 {
 	if (TObjectPtr<UUserWidget>* Found = ActiveUIs.Find(Tag))
 	{
@@ -107,7 +107,7 @@ void UUIManagerSubsystem::DestroyUI(const FGameplayTag& Tag)
 	}
 }
 
-UUserWidget* UUIManagerSubsystem::GetUI(const FGameplayTag& Tag) const
+UUserWidget* UUIManagerSubsystem::GetUI(FGameplayTag Tag) const
 {
 	if (const TObjectPtr<UUserWidget>* Found = ActiveUIs.Find(Tag))
 	{
@@ -116,7 +116,7 @@ UUserWidget* UUIManagerSubsystem::GetUI(const FGameplayTag& Tag) const
 	return nullptr;
 }
 
-bool UUIManagerSubsystem::IsUIShown(const FGameplayTag& Tag) const
+bool UUIManagerSubsystem::IsUIShown(FGameplayTag Tag) const
 {
 	if (const TObjectPtr<UUserWidget>* Found = ActiveUIs.Find(Tag))
 	{

@@ -38,10 +38,12 @@ class ARKNIGHTSGUESS_API UOperatorSubsystem : public UGameInstanceSubsystem
 	int32 ShuffleLimit;
 	int32 MaxGuessCount;
 	int32 HintFrequency;
-	
+
 	FVector2D MosaicOffset;
 
-	bool IsGameRunning;
+	bool bIsGameRunning;
+
+	int32 ExpectedPlayerCount = 1;
 
 public:
 	// ---  Default ---
@@ -65,7 +67,7 @@ public:
 	void EndGame();
 
 	UFUNCTION(BlueprintCallable)
-	TSet<FOperatorNamePair> GetAllOperatorNames() const;
+	TSet<FOperatorNamePair> GetAllOperatorNames() const { return OperatorNames; }
 
 	UMaterialInstanceDynamic* GetDynamicMaterial();
 
@@ -73,40 +75,46 @@ public:
 	void SetDefaultLevel(int32 Level);
 
 	UFUNCTION(BlueprintCallable)
-	int32 GetDefaultLevel() const;
+	int32 GetDefaultLevel() const { return DefaultLevel; }
 
 	UFUNCTION(BlueprintCallable)
 	void SetShuffleLimit(int32 Limit);
 
 	UFUNCTION(BlueprintCallable)
-	int32 GetShuffleLimit() const;
+	int32 GetShuffleLimit() const { return ShuffleLimit; }
 
 	UFUNCTION(BlueprintCallable)
 	void SetMaxGuessCount(int32 Limit);
 
 	UFUNCTION(BlueprintCallable)
-	int32 GetMaxGuessCount() const;
+	int32 GetMaxGuessCount() const { return MaxGuessCount; }
 
 	UFUNCTION(BlueprintCallable)
 	void SetHintFrequency(int32 Freq);
 
 	UFUNCTION(BlueprintCallable)
-	int32 GetHintFrequency() const;
+	int32 GetHintFrequency() const { return HintFrequency; }
 
 	UFUNCTION(BlueprintCallable)
 	FOperatorData GetRandomOperatorData();
-	
+
 	UFUNCTION(BlueprintCallable)
-	FGameplayTag GetGameplayMode() const;
+	FGameplayTag GetGameplayMode() const { return GuessMode; }
 
 	UFUNCTION(BlueprintCallable)
 	bool IsRunningOnServer() const;
 
+	UFUNCTION(BlueprintCallable)
+	bool IsGameRunning() const { return bIsGameRunning; }
+
+	UFUNCTION(BlueprintCallable)
+	int32 GetExpectedPlayerCount() const { return ExpectedPlayerCount; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetExpectedPlayerCount(int32 Count) { ExpectedPlayerCount = FMath::Max(1, Count); }
+
 	// ---- Net sync helpers (no server guard, called from PC NetMulticast) ----
-void NetSync_DefaultLevel(int32 Level);
-	void NetSync_ShuffleLimit(int32 Limit);
-	void NetSync_MaxGuessCount(int32 Count);
-	void NetSync_HintFrequency(int32 Freq);
+	void NetSync_Setting(const FGameplayTag& SettingTag, int32 Value);
 
 private:
 	UDataTable* GetCachedDataTable();

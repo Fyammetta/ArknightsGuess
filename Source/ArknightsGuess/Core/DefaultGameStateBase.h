@@ -26,9 +26,9 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	// ---- Player count ----
-	UFUNCTION(BlueprintCallable)
-	int32 GetPlayersCount() const;
+	// ---- Game lifecycle RPCs ----
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_StartGame(const FGameplayTag& Mode);
 
 	// ---- Round state ----
 	UFUNCTION(BlueprintCallable)

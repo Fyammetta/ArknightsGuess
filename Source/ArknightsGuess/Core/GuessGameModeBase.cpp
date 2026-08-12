@@ -8,6 +8,7 @@
 #include "ArknightsGuess.h"
 
 
+
 void AGuessGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
 	UE_LOG(LogArknights, Log, TEXT("[GM] PostLogin | Player=%s"), NewPlayer ? *NewPlayer->GetName() : TEXT("null"));
@@ -20,18 +21,6 @@ void AGuessGameModeBase::Logout(AController* Exiting)
 	Super::Logout(Exiting);
 }
 
-void AGuessGameModeBase::StartGame(const FGameplayTag& Mode)
-{
-	UE_LOG(LogArknights, Log, TEXT("[GM] StartGame | Mode=%s"), *Mode.ToString());
-	if (AGuessGameStateBase* GS = GetGameState<AGuessGameStateBase>())
-	{
-		GS->NetMulticast_StartGame(Mode);
-	}
-	else
-	{
-		UE_LOG(LogArknights, Warning, TEXT("[GM] StartGame failed: no GameState"));
-	}
-}
 
 void AGuessGameModeBase::EndGame()
 {
@@ -60,17 +49,18 @@ void AGuessGameModeBase::TryStartNewRound(APlayerController* Player)
 	}
 	if (ReadyPlayers.Contains(Player))
 	{
-		UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: Player already ready, waiting for others | Ready=%d/%d"), ReadyPlayers.Num(), GS->GetPlayersCount());
+		UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: Player already ready, waiting for others | Ready=%d/%d"), ReadyPlayers.Num(), GS->PlayerArray.Num());
 		return;
 	}
 
 	ReadyPlayers.Add(Player);
-	
+
 	GS->NetMulticast_BroadcastOnPlayerReady(Player, true, FGameplayTag::EmptyTag);
-	UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: Player ready | Ready=%d/%d"), ReadyPlayers.Num(), GS->GetPlayersCount());
-	if (ReadyPlayers.Num() == GS->GetPlayersCount())
+	UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: Player ready | Ready=%d/%d"), ReadyPlayers.Num(),GS->PlayerArray.Num());
+	if (ReadyPlayers.Num() >= GS->PlayerArray.Num())
 	{
 		UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: all players ready, starting new round"));
+		ReadyPlayers.Empty();
 		StartNewRound();
 	}
 }
@@ -94,12 +84,13 @@ void AGuessGameModeBase::StartNewRound()
 		return;
 	}
 
+
 	// 1. Pick an answer
 	CorrectAnswer = Subsystem->GetRandomOperatorData();
 
 	// 2. Push operator data to GameState
 	GS->EnterNewRound(CorrectAnswer);
-	
+
 
 	// 3. Transition to Guessing
 	SetRoundState(EGuessRoundState::Guessing);
@@ -122,7 +113,7 @@ void AGuessGameModeBase::ProcessGuess(const FName& OperatorName)
 		SetRoundState(EGuessRoundState::Verify);
 	}
 	else
-	{	
+	{
 		// else: wrong guess — client gets feedback, clarity level increases on GameState
 		int32 Max = Subsystem->GetMaxGuessCount();
 		int32 Cur = GS->GetGuessCount();

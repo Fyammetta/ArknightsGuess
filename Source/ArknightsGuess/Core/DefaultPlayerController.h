@@ -37,11 +37,8 @@ protected:
 	UFUNCTION()
 	void OnGameStart();
 
-	UFUNCTION()
-	void OnGameEnd();
 
-	UFUNCTION()
-	void OnOperatorDataReady(const FOperatorImage& Tex, const TArray<FString>& Hints);
+
 
 	void FinishLoading();
 	void ReturnToMain();
@@ -54,8 +51,6 @@ public:
 	UFUNCTION(Reliable, Server, BlueprintCallable)
 	void StartGame(const FGameplayTag& Mode);
 
-	UFUNCTION(Reliable, Server, BlueprintCallable)
-	void EndGame();
 
 	UFUNCTION(Reliable, Server, BlueprintCallable)
 	void Server_UpdateGameSetting(const FGameplayTag& SettingTag, const FString& Value);

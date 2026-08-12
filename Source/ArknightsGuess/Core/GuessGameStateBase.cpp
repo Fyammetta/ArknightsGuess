@@ -11,6 +11,7 @@
 
 void AGuessGameStateBase::AddPlayerState(APlayerState* PlayerState)
 {
+	Super::AddPlayerState(PlayerState);
 	UE_LOG(LogArknights, Log, TEXT("[GS] AddPlayerState | Player=%s"), PlayerState ? *PlayerState->GetPlayerName() : TEXT("null"));
 	if (PlayerState)
 		NetMulticast_BroadcastPlayerCountChanged(PlayerState->GetPlayerController(), Join);
@@ -18,6 +19,7 @@ void AGuessGameStateBase::AddPlayerState(APlayerState* PlayerState)
 
 void AGuessGameStateBase::RemovePlayerState(APlayerState* PlayerState)
 {
+	Super::RemovePlayerState(PlayerState);
 	UE_LOG(LogArknights, Log, TEXT("[GS] RemovePlayerState | Player=%s"), PlayerState ? *PlayerState->GetPlayerName() : TEXT("null"));
 	if (PlayerState)
 		NetMulticast_BroadcastPlayerCountChanged(PlayerState->GetPlayerController(), Leave);
@@ -30,18 +32,7 @@ void AGuessGameStateBase::NetMulticast_BroadcastPlayerCountChanged_Implementatio
 		OnPlayerCountChanged.Broadcast(Player, Type);
 }
 
-// ---- Game lifecycle RPCs ----
 
-void AGuessGameStateBase::NetMulticast_StartGame_Implementation(const FGameplayTag& Mode)
-{
-	UE_LOG(LogArknights, Log, TEXT("[GS] NetMulticast_StartGame | Mode=%s | Authority=%d"), *Mode.ToString(), HasAuthority());
-	if (HasAuthority()) return;
-
-	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
-	{
-		Subsystem->StartUp(Mode);
-	}
-}
 
 void AGuessGameStateBase::NetMulticast_EndGame_Implementation()
 {

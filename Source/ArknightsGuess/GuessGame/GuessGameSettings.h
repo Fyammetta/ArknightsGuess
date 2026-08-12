@@ -45,4 +45,8 @@ public:
 	// ---- Mode → Component registry ----
 	UPROPERTY(config, EditAnywhere, Category = "Mode")
 	TMap<FGameplayTag, TSubclassOf<UActorComponent>> ModeComponents;
+
+	// ---- Mode → Level mapping ----
+	UPROPERTY(config, EditAnywhere, Category = "Mode", meta = (AllowedClasses = "/Script/Engine.World"))
+	TMap<FGameplayTag, TSoftObjectPtr<UWorld>> ModeLevels;
 };

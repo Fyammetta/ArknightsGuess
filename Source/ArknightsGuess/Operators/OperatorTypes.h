@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Net/Serialization/FastArraySerializer.h"
 #include "OperatorTypes.generated.h"
 
@@ -141,3 +142,19 @@ struct TStructOpsTypeTraits<FTriedAnswerArray> : public TStructOpsTypeTraitsBase
 		WithNetDeltaSerializer = true,
 	};
 };
+
+// ---- Game tags (function-local static to avoid init-order issues) ----
+namespace GameModeTags
+{
+	inline const FGameplayTag& Root()    { static const FGameplayTag T = FGameplayTag::RequestGameplayTag("GameMode");         return T; }
+	inline const FGameplayTag& Mosaic()  { static const FGameplayTag T = FGameplayTag::RequestGameplayTag("GameMode.Mosaic");  return T; }
+	inline const FGameplayTag& Part()    { static const FGameplayTag T = FGameplayTag::RequestGameplayTag("GameMode.Part");    return T; }
+}
+
+namespace SettingTags
+{
+	inline const FGameplayTag& DefaultLevel()   { static const FGameplayTag T = FGameplayTag::RequestGameplayTag("Settings.DefaultLevel");   return T; }
+	inline const FGameplayTag& ShuffleLimit()   { static const FGameplayTag T = FGameplayTag::RequestGameplayTag("Settings.ShuffleLimit");   return T; }
+	inline const FGameplayTag& MaxGuessCount()  { static const FGameplayTag T = FGameplayTag::RequestGameplayTag("Settings.MaxGuessCount");  return T; }
+	inline const FGameplayTag& HintFrequency()  { static const FGameplayTag T = FGameplayTag::RequestGameplayTag("Settings.HintFrequency");  return T; }
+}

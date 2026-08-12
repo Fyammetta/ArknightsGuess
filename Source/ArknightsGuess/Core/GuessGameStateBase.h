@@ -19,8 +19,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerOnReadyDelegate, APlayerCo
 
 
 /**
- * RPC / flow-control layer — player tracking, game-lifecycle Multicast RPCs,
- * and round orchestration (EnterNewRound / Clarify).
+ * RPC / flow-control layer — player tracking, round orchestration (EnterNewRound / Clarify).
  *
  * Data properties and accessors live in ADefaultGameStateBase.
  */
@@ -35,27 +34,25 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FPlayerOnReadyDelegate WhenPlayerOnReady;
-	
+
 	virtual void AddPlayerState(APlayerState* PlayerState) override;
+	
 	virtual void RemovePlayerState(APlayerState* PlayerState) override;
 
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_BroadcastPlayerCountChanged(APlayerController* Player, EPlayerChangeType Type);
 
 	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_StartGame(const FGameplayTag& Mode);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_EndGame();
-
-	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_SetupOperator(const FOperatorImage& Tex, const TArray<FString>& Hints);
 
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_DisplayNextHint();
-	
+
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_BroadcastOnPlayerReady(APlayerController* Player, bool bReady, const FGameplayTag& Message);
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_EndGame();
 
 	void EnterNewRound(const FOperatorData& Operator);
 	void Clarify();

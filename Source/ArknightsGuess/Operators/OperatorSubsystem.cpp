@@ -25,7 +25,7 @@ void UOperatorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 	UsedOperators.Empty();
 	SpareOperators.Empty();
-	IsGameRunning = false;
+	bIsGameRunning = false;
 
 	if (auto Settings = UGuessGameSettings::Get())
 	{
@@ -45,7 +45,7 @@ void UOperatorSubsystem::Deinitialize()
 void UOperatorSubsystem::StartUp(const FGameplayTag& Mode)
 {
 	UE_LOG(LogArknights, Log, TEXT("[Subsystem] StartUp | Mode=%s | IsServer=%d"), *Mode.ToString(), IsRunningOnServer());
-	if (IsGameRunning) { UE_LOG(LogArknights, Warning, TEXT("[Subsystem] StartUp ignored: game already running")); return; }
+	if (bIsGameRunning) { UE_LOG(LogArknights, Warning, TEXT("[Subsystem] StartUp ignored: game already running")); return; }
 
 	if (UDataTable* DataTable = GetCachedDataTable())
 	{
@@ -72,24 +72,20 @@ void UOperatorSubsystem::StartUp(const FGameplayTag& Mode)
 	}
 
 	GuessMode = Mode;
-	IsGameRunning = true;
+	bIsGameRunning = true;
 	OnGuessGameStart.Broadcast();
 }
 
 void UOperatorSubsystem::EndGame()
 {
 	UE_LOG(LogArknights, Log, TEXT("[Subsystem] EndGame | IsServer=%d"), IsRunningOnServer());
-	if (!IsGameRunning) return;
+	if (!bIsGameRunning) return;
 
 	UsedOperators.Empty();
 	SpareOperators.Empty();
-	IsGameRunning = false;
+	bIsGameRunning = false;
+	ExpectedPlayerCount = 1;
 	OnGuessGameEnd.Broadcast();
-}
-
-TSet<FOperatorNamePair> UOperatorSubsystem::GetAllOperatorNames() const
-{
-	return OperatorNames;
 }
 
 UMaterialInstanceDynamic* UOperatorSubsystem::GetDynamicMaterial()
@@ -109,49 +105,29 @@ UMaterialInstanceDynamic* UOperatorSubsystem::GetDynamicMaterial()
 
 void UOperatorSubsystem::SetDefaultLevel(int32 Level)
 {
-	if (!IsRunningOnServer() || IsGameRunning || Level <= 0)
+	if (!IsRunningOnServer() || bIsGameRunning || Level <= 0)
 		return;
 	DefaultLevel = Level;
 }
 
-int32 UOperatorSubsystem::GetDefaultLevel() const
-{
-	return DefaultLevel;
-}
-
 void UOperatorSubsystem::SetShuffleLimit(int32 Limit)
 {
-	if (!IsRunningOnServer() || IsGameRunning || Limit <= 0)
+	if (!IsRunningOnServer() || bIsGameRunning || Limit <= 0)
 		return;
 	ShuffleLimit = Limit;
 }
 
-int32 UOperatorSubsystem::GetShuffleLimit() const
-{
-	return ShuffleLimit;
-}
-
 void UOperatorSubsystem::SetMaxGuessCount(int32 Limit)
 {
-	if (!IsRunningOnServer() || IsGameRunning || Limit <= 0) return;
+	if (!IsRunningOnServer() || bIsGameRunning || Limit <= 0) return;
 	MaxGuessCount = Limit;
-}
-
-int32 UOperatorSubsystem::GetMaxGuessCount() const
-{
-	return MaxGuessCount;
 }
 
 void UOperatorSubsystem::SetHintFrequency(int32 Freq)
 {
-	if (!IsRunningOnServer() || IsGameRunning || Freq <= 0)
+	if (!IsRunningOnServer() || bIsGameRunning || Freq <= 0)
 		return;
 	HintFrequency = Freq;
-}
-
-int32 UOperatorSubsystem::GetHintFrequency() const
-{
-	return HintFrequency;
 }
 
 FOperatorData UOperatorSubsystem::GetRandomOperatorData()
@@ -176,33 +152,21 @@ FOperatorData UOperatorSubsystem::GetRandomOperatorData()
 	return Data;
 }
 
-FGameplayTag UOperatorSubsystem::GetGameplayMode() const
+void UOperatorSubsystem::NetSync_Setting(const FGameplayTag& SettingTag, int32 Value)
 {
-	return GuessMode;
-}
+	if (SettingTag == SettingTags::DefaultLevel())
+		DefaultLevel = Value;
+	else if (SettingTag == SettingTags::ShuffleLimit())
+		ShuffleLimit = Value;
+	else if (SettingTag == SettingTags::MaxGuessCount())
+		MaxGuessCount = Value;
+	else if (SettingTag == SettingTags::HintFrequency())
+		HintFrequency = Value;
+	else if (SettingTag.MatchesTag(GameModeTags::Root()))
+		GuessMode = SettingTag;
+	else return;
 
-void UOperatorSubsystem::NetSync_DefaultLevel(int32 Level)
-{
-	DefaultLevel = Level;
-	OnGameSettingChanged.Broadcast(FGameplayTag::RequestGameplayTag("Settings.DefaultLevel"), FString::FromInt(Level));
-}
-
-void UOperatorSubsystem::NetSync_ShuffleLimit(int32 Limit)
-{
-	ShuffleLimit = Limit;
-	OnGameSettingChanged.Broadcast(FGameplayTag::RequestGameplayTag("Settings.ShuffleLimit"), FString::FromInt(Limit));
-}
-
-void UOperatorSubsystem::NetSync_MaxGuessCount(int32 Count)
-{
-	MaxGuessCount = Count;
-	OnGameSettingChanged.Broadcast(FGameplayTag::RequestGameplayTag("Settings.MaxGuessCount"), FString::FromInt(Count));
-}
-
-void UOperatorSubsystem::NetSync_HintFrequency(int32 Freq)
-{
-	HintFrequency = Freq;
-	OnGameSettingChanged.Broadcast(FGameplayTag::RequestGameplayTag("Settings.HintFrequency"), FString::FromInt(Freq));
+	OnGameSettingChanged.Broadcast(SettingTag, FString::FromInt(Value));
 }
 
 bool UOperatorSubsystem::IsRunningOnServer() const

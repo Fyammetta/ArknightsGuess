@@ -29,10 +29,19 @@ void ADefaultGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(ADefaultGameStateBase, TriedAnswers);
 }
 
-int32 ADefaultGameStateBase::GetPlayersCount() const
+// ---- Game lifecycle RPCs ----
+
+void ADefaultGameStateBase::NetMulticast_StartGame_Implementation(const FGameplayTag& Mode)
 {
-	return PlayerArray.Num();
+	UE_LOG(LogArknights, Log, TEXT("[DefaultGS] NetMulticast_StartGame | Mode=%s | Authority=%d"), *Mode.ToString(), HasAuthority());
+	if (HasAuthority()) return;
+
+	if (auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
+	{
+		Subsystem->StartUp(Mode);
+	}
 }
+// ---- Round state ----
 
 EGuessRoundState ADefaultGameStateBase::GetGuessRoundState() const
 {
@@ -105,7 +114,7 @@ void ADefaultGameStateBase::GenerateGameplayComponent()
 	const TSubclassOf<UActorComponent> Class = Settings->ModeComponents[Mode];
 	if (!Class)
 	{
-		UE_LOG(LogArknights, Warning, TEXT("[DefaultGS] GenerateGameplayComponent: null class for mode '%s'"), *Mode.ToString());
+		UE_LOG(LogArknights, Warning, TEXT("[DefaultGS] GenerateGameplayComponent: null class for mode '%s'"), *Class->GetName());
 		return;
 	}
 

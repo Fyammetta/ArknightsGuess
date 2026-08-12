@@ -21,24 +21,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-namespace GameModeTags
-{
-	// Use lazy initialization via function-local statics to avoid static init order issues.
-	// FGameplayTag::RequestGameplayTag requires UGameplayTagsManager which is not available
-	// during dlopen() on Android — this causes a native crash in call_constructors.
-	inline const FGameplayTag& Mosaic()
-	{
-		static const FGameplayTag Tag = FGameplayTag::RequestGameplayTag("GameMode.Mosaic");
-		return Tag;
-	}
-	inline const FGameplayTag& Part()
-	{
-		static const FGameplayTag Tag = FGameplayTag::RequestGameplayTag("GameMode.Part");
-		return Tag;
-	}
-}
-
-
 void UGameMainUI::NativeConstruct()
 {
 	Super::NativeConstruct();

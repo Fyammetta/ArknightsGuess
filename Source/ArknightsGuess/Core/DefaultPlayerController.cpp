@@ -5,11 +5,12 @@
 #include "GuessGameModeBase.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
-#include "ArknightsGuess/Operators/OperatorTypes.h"
 #include "ArknightsGuess/UI/UIManagerSettings.h"
 #include "ArknightsGuess/UI/UIManagerSubsystem.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "ArknightsGuess.h"
+#include "GuessGame/GuessGameSettings.h"
+#include "Kismet/GameplayStatics.h"
 
 // ============================================================
 //  UI lifecycle
@@ -24,17 +25,11 @@ void ADefaultPlayerController::BeginPlay()
 	SetShowMouseCursor(true);
 
 	// Default loading / HUD tags (blueprint can override)
-	if (!LoadingUITag.IsValid())
-		LoadingUITag = FGameplayTag::RequestGameplayTag("Main.Loading");
-	if (!GameHUDTag.IsValid())
-		GameHUDTag = FGameplayTag::RequestGameplayTag("GameMode.Mosaic");
 
 	// Bind loading-flow delegates
 	if (auto* Sub = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
 		Sub->OnGuessGameStart.AddDynamic(this, &ADefaultPlayerController::OnGameStart);
-		Sub->OnOperatorDataReceived.AddDynamic(this, &ADefaultPlayerController::OnOperatorDataReady);
-		Sub->OnGuessGameEnd.AddDynamic(this, &ADefaultPlayerController::OnGameEnd);
 	}
 
 	if (InitialUITag.IsValid())
@@ -48,6 +43,17 @@ void ADefaultPlayerController::BeginPlay()
 
 void ADefaultPlayerController::OnGameStart()
 {
+	UE_LOG(LogArknights, Log, TEXT("[DefaultPC] OnGameStart -> Travel to game level"));
+
+	// Travel to the game level — mode was already stored by Subsystem->StartUp
+	auto* Sub = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
+	auto* Settings = UGuessGameSettings::Get();
+	const FGameplayTag Mode = Sub ? Sub->GetGameplayMode() : FGameplayTag();
+	if (Settings && Mode.IsValid() && Settings->ModeLevels.Contains(Mode))
+	{
+		UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Mode], false);
+	}
+
 	UE_LOG(LogArknights, Log, TEXT("[DefaultPC] OnGameStart -> Show Loading"));
 	LoadingStartTime = GetWorld()->GetTimeSeconds();
 
@@ -69,52 +75,6 @@ void ADefaultPlayerController::OnGameStart()
 		LoadingTimerHandle, this, &ADefaultPlayerController::FinishLoading, MinTime, false);
 }
 
-void ADefaultPlayerController::OnGameEnd()
-{
-	UE_LOG(LogArknights, Log, TEXT("[DefaultPC] OnGameEnd -> Show Loading"));
-	if (!GetWorld()) { UE_LOG(LogArknights, Warning, TEXT("[DefaultPC] OnGameEnd failed: no World")); return; }
-
-	GetWorld()->GetTimerManager().ClearTimer(LoadingTimerHandle);
-
-	LoadingStartTime = GetWorld()->GetTimeSeconds();
-
-	if (auto* UIMgr = UUIManagerSubsystem::Get(this))
-	{
-		if (GameHUDTag.IsValid())
-		{
-			UIMgr->HideUI(GameHUDTag);
-		}
-
-		if (LoadingUITag.IsValid())
-		{
-			UIMgr->ShowUI(LoadingUITag);
-		}
-	}
-
-	const float MinTime = UUIManagerSettings::Get()->MinLoadingTime;
-	GetWorld()->GetTimerManager().SetTimer(
-		LoadingTimerHandle, this, &ADefaultPlayerController::ReturnToMain, MinTime, false);
-}
-
-void ADefaultPlayerController::OnOperatorDataReady(const FOperatorImage& Tex, const TArray<FString>& Hints)
-{
-	UE_LOG(LogArknights, Log, TEXT("[DefaultPC] OnOperatorDataReady | Hints=%d"), Hints.Num());
-	if (!GetWorld()) { UE_LOG(LogArknights, Warning, TEXT("[DefaultPC] OnOperatorDataReady failed: no World")); return; }
-
-	const float Elapsed = GetWorld()->GetTimeSeconds() - LoadingStartTime;
-	const float MinTime = UUIManagerSettings::Get()->MinLoadingTime;
-	const float Remaining = MinTime - Elapsed;
-
-	if (Remaining > 0.0f)
-	{
-		GetWorld()->GetTimerManager().SetTimer(
-			LoadingTimerHandle, this, &ADefaultPlayerController::FinishLoading, Remaining, false);
-	}
-	else
-	{
-		FinishLoading();
-	}
-}
 
 void ADefaultPlayerController::FinishLoading()
 {
@@ -163,31 +123,14 @@ void ADefaultPlayerController::StartGame_Implementation(const FGameplayTag& Mode
 	}
 
 	UE_LOG(LogArknights, Log, TEXT("[PC] StartGame | Mode=%s"), *Mode.ToString());
-	auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
-	auto GM = GetWorld()->GetAuthGameMode<AGuessGameModeBase>();
-	if (!Subsystem || !GM) { UE_LOG(LogArknights, Warning, TEXT("[PC] StartGame failed: no Subsystem or GameMode")); return; }
+	auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
+	auto Settings = UGuessGameSettings::Get();
+	if (!Subsystem || !Settings) { UE_LOG(LogArknights, Warning, TEXT("[PC] StartGame failed: no Settings or Subsystem")); return; }
+	if (!Settings->ModeLevels.Contains(Mode)) { UE_LOG(LogArknights, Warning, TEXT("[PC] StartGame failed: Can't find level to open")); return; }
 
-	GM->StartGame(Mode);
 	Subsystem->StartUp(Mode);
 }
 
-void ADefaultPlayerController::EndGame_Implementation()
-{
-	if (!IsLocalController())
-	{
-		UE_LOG(LogArknights, Log, TEXT("[PC] EndGame from client — returning to local main menu"));
-		ClientTravel(TEXT("/Game/Maps/Map_MainLevel"), TRAVEL_Absolute, false);
-		return;
-	}
-
-	UE_LOG(LogArknights, Log, TEXT("[PC] EndGame"));
-	auto* Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
-	auto GM = GetWorld()->GetAuthGameMode<AGuessGameModeBase>();
-	if (!Subsystem || !GM) { UE_LOG(LogArknights, Warning, TEXT("[PC] EndGame failed: no Subsystem or GameMode")); return; }
-
-	Subsystem->EndGame();
-	GM->EndGame();
-}
 
 void ADefaultPlayerController::Server_UpdateGameSetting_Implementation(const FGameplayTag& SettingTag, const FString& Value)
 {
@@ -198,13 +141,13 @@ void ADefaultPlayerController::Server_UpdateGameSetting_Implementation(const FGa
 
 	const int32 IntValue = FCString::Atoi(*Value);
 
-	if (SettingTag == FGameplayTag::RequestGameplayTag("Settings.DefaultLevel"))
+	if (SettingTag == SettingTags::DefaultLevel())
 		Sub->SetDefaultLevel(IntValue);
-	else if (SettingTag == FGameplayTag::RequestGameplayTag("Settings.ShuffleLimit"))
+	else if (SettingTag == SettingTags::ShuffleLimit())
 		Sub->SetShuffleLimit(IntValue);
-	else if (SettingTag == FGameplayTag::RequestGameplayTag("Settings.MaxGuessCount"))
+	else if (SettingTag == SettingTags::MaxGuessCount())
 		Sub->SetMaxGuessCount(IntValue);
-	else if (SettingTag == FGameplayTag::RequestGameplayTag("Settings.HintFrequency"))
+	else if (SettingTag == SettingTags::HintFrequency())
 		Sub->SetHintFrequency(IntValue);
 	else
 	{
@@ -221,15 +164,5 @@ void ADefaultPlayerController::NetMulticast_UpdateGameSetting_Implementation(con
 	if (!Sub) return;
 
 	const int32 IntValue = FCString::Atoi(*Value);
-
-	if (SettingTag == FGameplayTag::RequestGameplayTag("Settings.DefaultLevel"))
-		Sub->NetSync_DefaultLevel(IntValue);
-	else if (SettingTag == FGameplayTag::RequestGameplayTag("Settings.ShuffleLimit"))
-		Sub->NetSync_ShuffleLimit(IntValue);
-	else if (SettingTag == FGameplayTag::RequestGameplayTag("Settings.MaxGuessCount"))
-		Sub->NetSync_MaxGuessCount(IntValue);
-	else if (SettingTag == FGameplayTag::RequestGameplayTag("Settings.HintFrequency"))
-		Sub->NetSync_HintFrequency(IntValue);
-	else
-		UE_LOG(LogArknights, Warning, TEXT("[PC] NetMulticast_UpdateGameSetting: unknown tag %s"), *SettingTag.ToString());
+	Sub->NetSync_Setting(SettingTag, IntValue);
 }

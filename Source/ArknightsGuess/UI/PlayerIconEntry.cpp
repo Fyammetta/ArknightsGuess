@@ -17,5 +17,5 @@ void UPlayerIconEntry::SetEntrySize(int32 Size)
 	
 	auto Brush = Icon->GetBrush();
 	
-	Brush.OutlineSettings.
+	/*Brush.OutlineSettings.*/
 }

@@ -7,6 +7,7 @@
 #include "Blueprint/UserWidget.h"
 #include "PlayerIconEntry.generated.h"
 
+class IPlayerIconInterface;
 class UImage;
 class USizeBox;
 /**
@@ -23,12 +24,12 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UImage* Icon;
 	
+	bool bIsValid;
+	
+	TWeakInterfacePtr<IPlayerIconInterface> Object;
 	
 protected:
 	virtual void NativeOnListItemObjectSet(UObject* ListItemObject) override;
-	
-public:
-	UFUNCTION(BlueprintCallable)
-	void SetEntrySize(int32 Size);
-	
+
+	virtual void NativeOnItemSelectionChanged(bool bIsSelected) override;
 };

@@ -6,6 +6,7 @@
 #include "Animation/UMGSequencePlayer.h"
 #include "ArknightsGuess/Core/DefaultPlayerController.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
+#include "ArknightsGuess/Operators/OperatorTags.h"
 #include "ArknightsGuess/Operators/OperatorTypes.h"
 #include "ArknightsGuess/Operators/OperatorUISettings.h"
 #include "ArknightsGuess/GuessGame/GuessGameSettings.h"
@@ -18,6 +19,7 @@
 #include "Components/WidgetSwitcher.h"
 #include "DevNotification/Public/DevNotificationSubsystem.h"
 #include "ArknightsGuess.h"
+#include "UIManagerSubsystem.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -145,7 +147,8 @@ void UGameMainUI::BindButtons()
 	ONCLICK(PartModeButton,OnPartModeClicked);
 	ONCLICK(StartGameButton,OnStartGameClicked);
 	ONCLICK(QuitGameButton,OnQuitGameClicked);
-		
+	ONCLICK(SettingsButton,OnSettingsClicked);
+
 }
 
 void UGameMainUI::ExchangeButtonStyle()
@@ -233,11 +236,12 @@ void UGameMainUI::OnSoloPlayClicked()
 
 void UGameMainUI::OnMultiPlayClicked()
 {
-	UGameplayStatics::OpenLevel(this, TEXT("Map_MainLevel"),true, TEXT("listen"));
 	
-	SubWidgetSwitcher->SetActiveWidgetIndex(1);
-	PlayAnimationForward(ShowSettingsWidget);
-	bExpandedSettings = true;
+	// SubWidgetSwitcher->SetActiveWidgetIndex(1);
+	// PlayAnimationForward(ShowSettingsWidget);
+	// bExpandedSettings = true;
+	
+	GetWorld()->GetFirstPlayerController<ADefaultPlayerController>()->PrepareForMultiply(TEXT("25565"));
 }
 
 void UGameMainUI::OnMosaicModeClicked()
@@ -309,4 +313,12 @@ void UGameMainUI::OnQuitGameClicked()
 	UE_LOG(LogArknights, Error, TEXT("[MainUI] Fail to quit game, FORCE QUIT"));
 	GEngine->DeferredCommands.Add(TEXT("quit"));
 
+}
+
+void UGameMainUI::OnSettingsClicked()
+{
+	auto Subsystem = UUIManagerSubsystem::Get(this);
+	if (!Subsystem) return;
+		
+	Subsystem->ShowUI(UITags::Settings());
 }

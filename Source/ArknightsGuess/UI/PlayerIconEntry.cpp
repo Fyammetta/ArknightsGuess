@@ -3,19 +3,30 @@
 
 #include "PlayerIconEntry.h"
 
+#include "PlayerIconInterface.h"
 #include "Components/Image.h"
-#include "Components/SizeBox.h"
+
 
 void UPlayerIconEntry::NativeOnListItemObjectSet(UObject* ListItemObject)
 {
+	if (ListItemObject->Implements<UPlayerIconInterface>())
+	{	
+		/*if (Object.IsValid())
+			Object->SetObjectValid(false);*/
+		
+
+		Object = Cast<IPlayerIconInterface>(ListItemObject);
+		Icon->SetBrushFromTexture(Object->GetPlayerIcon());
+		//Object->SetObjectValid(true);
+	}
 }
 
-void UPlayerIconEntry::SetEntrySize(int32 Size)
+void UPlayerIconEntry::NativeOnItemSelectionChanged(bool bIsSelected)
 {
-	SizeBox->SetHeightOverride(Size);
-	SizeBox->SetWidthOverride(Size);
+	IUserObjectListEntry::NativeOnItemSelectionChanged(bIsSelected);
 	
-	auto Brush = Icon->GetBrush();
-	
-	/*Brush.OutlineSettings.*/
+	if (Object.IsValid() /*&& Object->IsObjectValid()*/)
+	{
+		Object->Select(bIsSelected);
+	}
 }

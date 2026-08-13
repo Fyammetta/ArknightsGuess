@@ -29,6 +29,9 @@ public:
 
 	UPROPERTY(config, EditAnywhere, Category = "Datas")
 	TSoftObjectPtr<UDataTable> OperatorDatas;
+	
+	UPROPERTY(config, EditAnywhere, Category = "Datas")
+	TSoftObjectPtr<UDataTable> OperatorIcons;
 
 	// ---- Operator Sample ----
 	UPROPERTY(config, EditAnywhere, Category = "Operator Sample")

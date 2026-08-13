@@ -22,29 +22,9 @@ class ARKNIGHTSGUESS_API ADefaultPlayerController : public APlayerController
 protected:
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-	FGameplayTag InitialUITag;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-	FGameplayTag LoadingUITag;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-	FGameplayTag GameHUDTag;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
-	float LoadingMinTime = 2.f;
-
 	UFUNCTION()
 	void OnGameStart();
 
-
-
-
-	void FinishLoading();
-	void ReturnToMain();
-
-	float LoadingStartTime = 0.0f;
-	FTimerHandle LoadingTimerHandle;
 
 public:
 	// ---- Game-control RPCs ----
@@ -57,4 +37,7 @@ public:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_UpdateGameSetting(const FGameplayTag& SettingTag, const FString& Value);
+	
+	UFUNCTION(BlueprintCallable)
+	void PrepareForMultiply(const FString& Port);
 };

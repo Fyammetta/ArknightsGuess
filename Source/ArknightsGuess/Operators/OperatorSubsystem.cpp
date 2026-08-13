@@ -173,7 +173,8 @@ bool UOperatorSubsystem::IsRunningOnServer() const
 {
 	if (UWorld* World = GetWorld())
 	{
-		return World->GetNetMode() < ENetMode::NM_Client;
+		auto Mode =  World->GetNetMode();
+		return Mode < ENetMode::NM_Client;
 	}
 	return false;
 }

@@ -2,6 +2,7 @@
 
 #include "DefaultPlayerController.h"
 
+#include "Audio/GuessAudioSubsystem.h"
 #include "GuessGameModeBase.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
@@ -24,6 +25,12 @@ void ADefaultPlayerController::BeginPlay()
 	UWidgetBlueprintLibrary::SetInputMode_UIOnlyEx(this);
 	SetShowMouseCursor(true);
 
+	// Audio setup: push sound mix and apply saved volumes
+	if (auto* AudioSub = GetGameInstance()->GetSubsystem<UGuessAudioSubsystem>())
+	{
+		AudioSub->Start();
+	}
+
 	// Default loading / HUD tags (blueprint can override)
 
 	// Bind loading-flow delegates
@@ -32,13 +39,12 @@ void ADefaultPlayerController::BeginPlay()
 		Sub->OnGuessGameStart.AddDynamic(this, &ADefaultPlayerController::OnGameStart);
 	}
 
-	if (InitialUITag.IsValid())
+
+	if (auto* UIMgr = UUIManagerSubsystem::Get(this))
 	{
-		if (auto* UIMgr = UUIManagerSubsystem::Get(this))
-		{
-			UIMgr->ShowUI(InitialUITag);
-		}
+		UIMgr->ShowUI(UITags::MainEntry());
 	}
+	
 }
 
 void ADefaultPlayerController::OnGameStart()
@@ -53,60 +59,16 @@ void ADefaultPlayerController::OnGameStart()
 	{
 		UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Mode], false);
 	}
-
-	UE_LOG(LogArknights, Log, TEXT("[DefaultPC] OnGameStart -> Show Loading"));
-	LoadingStartTime = GetWorld()->GetTimeSeconds();
-
-	if (auto* UIMgr = UUIManagerSubsystem::Get(this))
-	{
-		if (InitialUITag.IsValid())
-		{
-			UIMgr->HideUI(InitialUITag);
-		}
-
-		if (LoadingUITag.IsValid())
-		{
-			UIMgr->ShowUI(LoadingUITag);
-		}
-	}
-
-	const float MinTime = UUIManagerSettings::Get()->MinLoadingTime;
-	GetWorld()->GetTimerManager().SetTimer(
-		LoadingTimerHandle, this, &ADefaultPlayerController::FinishLoading, MinTime, false);
 }
 
-
-void ADefaultPlayerController::FinishLoading()
+void ADefaultPlayerController::PrepareForMultiply(const FString& Port)
 {
-	UE_LOG(LogArknights, Log, TEXT("[DefaultPC] FinishLoading -> Show GameHUD"));
-	if (auto* UIMgr = UUIManagerSubsystem::Get(this))
+	auto* Settings = UGuessGameSettings::Get();
+	auto Tag = MapTags::MultiRoom();
+	if (Settings && Settings->ModeLevels.Contains(Tag))
 	{
-		if (LoadingUITag.IsValid())
-		{
-			UIMgr->HideUI(LoadingUITag);
-		}
-
-		if (GameHUDTag.IsValid())
-		{
-			UIMgr->ShowUI(GameHUDTag);
-		}
-	}
-}
-
-void ADefaultPlayerController::ReturnToMain()
-{
-	UE_LOG(LogArknights, Log, TEXT("[DefaultPC] ReturnToMain -> Show MainUI"));
-	if (auto* UIMgr = UUIManagerSubsystem::Get(this))
-	{
-		if (LoadingUITag.IsValid())
-		{
-			UIMgr->HideUI(LoadingUITag);
-		}
-
-		if (InitialUITag.IsValid())
-		{
-			UIMgr->ShowUI(InitialUITag);
-		}
+		FString Option = FString::Printf(TEXT("Listen -port=<%s>"),*Port);
+		UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Tag], true, Option);
 	}
 }
 

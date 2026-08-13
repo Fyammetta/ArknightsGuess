@@ -83,7 +83,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UButton> QuitGameButton;
 	
-
+	// ---- Settings Button ----
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UButton> SettingsButton;
+	
 	// ---- Sample image ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UImage> SampleImage;
@@ -152,6 +155,9 @@ protected:
 	
 	UFUNCTION()
 	void OnQuitGameClicked();
+	
+	UFUNCTION()
+	void OnSettingsClicked();
 
 	// ---- ComboBox callbacks ----
 	UFUNCTION()

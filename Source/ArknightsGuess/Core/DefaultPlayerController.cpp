@@ -67,8 +67,8 @@ void ADefaultPlayerController::PrepareForMultiply(const FString& Port)
 	auto Tag = MapTags::MultiRoom();
 	if (Settings && Settings->ModeLevels.Contains(Tag))
 	{
-		FString Option = FString::Printf(TEXT("Listen -port=<%s>"),*Port);
-		UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Tag], true, Option);
+		FString Option = FString::Printf(TEXT("listen -port=%s"),*Port);
+		UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Tag], true, /*Option*/TEXT("listen"));
 	}
 }
 

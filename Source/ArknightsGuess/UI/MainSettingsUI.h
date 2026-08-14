@@ -7,6 +7,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MainSettingsUI.generated.h"
 
+class UScrollBox;
 class UTextBlock;
 class USlider;
 class UEditableText;
@@ -30,6 +31,14 @@ class ARKNIGHTSGUESS_API UMainSettingsUI : public UUserWidget
 	TMap<FGameplayTag, float> SoundVolumeMapping;
 	
 	TWeakObjectPtr<UButton> CurrentSettingsButton;
+	
+	int32 ResolutionIndex;
+	
+	TArray<FIntPoint> Resolutions;
+	
+	FTimerHandle ResolutionChangeTimer;
+	
+	EWindowMode::Type ScreenMode;
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
@@ -80,6 +89,30 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UTextBlock* MainVolumeText;
 	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UScrollBox* ResolutionsBox;
+	
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	FSlateFontInfo ResolutionFont;
+	
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly)
+	float TextHeight;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UButton* ResolutionUpButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UButton* ResolutionDownButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UButton* FullScreenButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UButton* WindowedFullscreenButton;
+		
+		UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UButton* WindowedButton;
+	
 	UFUNCTION(BlueprintCallable)
 	void ClickSettingButton(UButton* Target);
 private:
@@ -91,6 +124,9 @@ private:
 
 	UFUNCTION()
 	void OnSaveClicked();
+	
+	UFUNCTION()
+	void OnQuitClicked();
 
 	UFUNCTION()
 	void OnMainVolumeChanged(float Value);
@@ -107,5 +143,24 @@ private:
 	void ApplyVolume(const FGameplayTag& Tag, float Value);
 
 	void InitVolumeSlider(USlider* Slider, const FGameplayTag& Tag);
+	
+	void GetAllAvailableResolutions();
+	
+	UFUNCTION()
+	void OnSetResolutionUp();
+	
+	UFUNCTION()
+	void OnSetResolutionDown();
+	
+	void InterpResolutionOffset();
+	
+	UFUNCTION()
+	void OnSetFullScreenMode();
+	
+	UFUNCTION()
+	void OnSetWindowedMode();
+	
+	UFUNCTION()
+	void OnSetWindowedFullScreenMode();
 
 };

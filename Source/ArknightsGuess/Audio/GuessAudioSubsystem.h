@@ -21,9 +21,9 @@ class ARKNIGHTSGUESS_API UGuessAudioSubsystem : public UGameInstanceSubsystem
 public:
 	
 	static UGuessAudioSubsystem* Get(const UObject* WorldContextObject);
-	
-	/** Push the default sound mix and apply saved volumes. Idempotent. */
-	void Start();
+
+	/** Apply saved volumes for all channels. */
+	void ApplySavedVolumes();
 
 	/** Apply a volume override for the given channel immediately. */
 	void ApplyVolume(const FGameplayTag& Tag, float Volume);
@@ -50,6 +50,4 @@ protected:
 
 private:
 	void LoadTables();
-
-	bool bStarted = false;
 };

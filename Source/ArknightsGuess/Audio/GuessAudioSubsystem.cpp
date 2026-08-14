@@ -19,23 +19,8 @@ UGuessAudioSubsystem* UGuessAudioSubsystem::Get(const UObject* WorldContextObjec
 	return WorldContextObject->GetWorld()->GetGameInstance()->GetSubsystem<UGuessAudioSubsystem>();
 }
 
-void UGuessAudioSubsystem::Start()
+void UGuessAudioSubsystem::ApplySavedVolumes()
 {
-	if (bStarted) return;
-
-	auto* AudioSettings = UGuessAudioSettings::Get();
-	USoundMix* Mix = AudioSettings ? AudioSettings->GetDefaultSoundMix() : nullptr;
-	if (!Mix)
-	{
-		UE_LOG(LogArknights, Warning, TEXT("[GuessAudio] Start aborted: DefaultSoundMix is null"));
-		return;
-	}
-
-	bStarted = true;
-
-	UGameplayStatics::PushSoundMixModifier(GetGameInstance(), Mix);
-	UE_LOG(LogArknights, Log, TEXT("[GuessAudio] Start | Mix=%s"), *GetNameSafe(Mix));
-
 	auto* Settings = UGuessGamerSettings::Get();
 	const FGameplayTag Tags[] = { SoundTags::Default(), SoundTags::Music(), SoundTags::UI(), SoundTags::Voice() };
 	for (const FGameplayTag& Tag : Tags)

@@ -2,7 +2,6 @@
 
 #include "DefaultPlayerController.h"
 
-#include "Audio/GuessAudioSubsystem.h"
 #include "GuessGameModeBase.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
@@ -25,11 +24,7 @@ void ADefaultPlayerController::BeginPlay()
 	UWidgetBlueprintLibrary::SetInputMode_UIOnlyEx(this);
 	SetShowMouseCursor(true);
 
-	// Audio setup: push sound mix and apply saved volumes
-	if (auto* AudioSub = GetGameInstance()->GetSubsystem<UGuessAudioSubsystem>())
-	{
-		AudioSub->Start();
-	}
+	// Audio setup handled by UGuessGameInstance::OnStart
 
 	// Default loading / HUD tags (blueprint can override)
 

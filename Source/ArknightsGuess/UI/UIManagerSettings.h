@@ -23,14 +23,13 @@ public:
 	}
 
 	/** FGameplayTag → Widget class. The subsystem creates on first ShowUI() call. */
-	UPROPERTY(config, EditAnywhere, Category = "UI Registry", meta = (TitleProperty = "Tag"))
+	UPROPERTY(Config, EditAnywhere, Category = "UI Registry", meta = (TitleProperty = "Tag"))
 	TMap<FGameplayTag, TSubclassOf<UUserWidget>> UIRegistry;
 
-	/** Minimum time (seconds) the loading screen stays visible. */
-	UPROPERTY(config, EditAnywhere, Category = "UI Registry")
-	float MinLoadingTime = 0.5f;
-
 	/** Z-order applied when AddToViewport (higher = on top). */
-	UPROPERTY(config, EditAnywhere, Category = "UI Registry")
+	UPROPERTY(Config, EditAnywhere, Category = "UI Registry")
 	int32 DefaultZOrder = 0;
+	
+	UPROPERTY(Config,EditAnywhere, Category = "Screen")
+	TArray<FIntPoint> Resolutions;
 };

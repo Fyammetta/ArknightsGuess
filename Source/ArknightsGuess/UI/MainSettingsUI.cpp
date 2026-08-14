@@ -2,15 +2,25 @@
 
 
 #include "MainSettingsUI.h"
+
+#include "ArknightsGuess.h"
 #include "Audio/GuessAudioSubsystem.h"
+#include "Blueprint/SlateBlueprintLibrary.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/Button.h"
 #include "Components/EditableText.h"
 #include "Components/Image.h"
+#include "Components/ScrollBox.h"
+#include "Components/ScrollBoxSlot.h"
+#include "Components/SizeBox.h"
 #include "Components/Slider.h"
 #include "Components/TextBlock.h"
 #include "Components/TileView.h"
 #include "Core/GuessGamerSettings.h"
 #include "Core/GuessPlayerState.h"
+#include "HAL/PlatformApplicationMisc.h"
+#include "Kismet/KismetSystemLibrary.h"
 #include "Operators/OperatorTags.h"
 #include "Operators/OperatorUISettings.h"
 #include "UI/PlayerIconObject.h"
@@ -33,8 +43,15 @@ void UMainSettingsUI::NativeConstruct()
 	IconsTile->SetListItems(Objects);
 	
 	SaveButton->OnClicked.AddUniqueDynamic(this, &UMainSettingsUI::OnSaveClicked);
-	QuitButton->OnClicked.AddUniqueDynamic(this, &UMainSettingsUI::RemoveFromParent);
+	QuitButton->OnClicked.AddUniqueDynamic(this, &UMainSettingsUI::OnQuitClicked);
 	ConfirmIconButton->OnClicked.AddUniqueDynamic(this, &UMainSettingsUI::OnConfirmIconClicked);
+	
+	ResolutionUpButton->OnClicked.AddUniqueDynamic(this, &UMainSettingsUI::OnSetResolutionUp);
+	ResolutionDownButton->OnClicked.AddUniqueDynamic(this, &UMainSettingsUI::OnSetResolutionDown);
+	
+	FullScreenButton->OnClicked.AddUniqueDynamic(this, &UMainSettingsUI::OnSetFullScreenMode);
+	WindowedButton->OnClicked.AddUniqueDynamic(this, &UMainSettingsUI::OnSetWindowedMode);
+	WindowedFullscreenButton->OnClicked.AddUniqueDynamic(this, &UMainSettingsUI::OnSetWindowedFullScreenMode);
 	
 	OnSelectedIcon(UGuessGamerSettings::GetPlayerIcon());
 	auto Name = UGuessGamerSettings::GetPlayerName();
@@ -53,6 +70,8 @@ void UMainSettingsUI::NativeConstruct()
 	InitVolumeSlider(UIVolumeSlider, SoundTags::UI());
 	InitVolumeSlider(VoiceVolumeSlider, SoundTags::Voice());
 	InitVolumeSlider(MusicVolumeSlider, SoundTags::Music());
+	
+	GetAllAvailableResolutions();
 }
 
 void UMainSettingsUI::ClickSettingButton(UButton* Target)
@@ -96,9 +115,10 @@ void UMainSettingsUI::OnConfirmIconClicked()
 	}
 }
 
-
 void UMainSettingsUI::OnSaveClicked()
 {
+	
+	
 	UGuessGamerSettings::SetPlayerIcon(PlayerIcon);
 	UGuessGamerSettings::SetPlayerName(PlayerName);
 
@@ -106,9 +126,36 @@ void UMainSettingsUI::OnSaveClicked()
 	{
 		UGuessGamerSettings::SetVolumeByTag(Pair.Key, Pair.Value);
 	}
+	if (auto Settings = UGameUserSettings::GetGameUserSettings())
+	{
+		if (ScreenMode == EWindowMode::Type::Fullscreen)
+		{
+			Settings->SetScreenResolution(Resolutions.Last());
+		}
+		else
+		{
+			Settings->SetScreenResolution(Resolutions[ResolutionIndex]);
+		}
+		Settings->SetFullscreenMode(ScreenMode);
+	}
+	UGuessGamerSettings::Get()->ApplySettings(true);
 
-	UGuessGamerSettings::Get()->SaveSettings();
+	RemoveFromParent();
+}
 
+void UMainSettingsUI::OnQuitClicked()
+{
+	OnSelectedIcon(UGuessGamerSettings::GetPlayerIcon());
+	auto Name = UGuessGamerSettings::GetPlayerName();
+	if (!Name.IsEmpty())
+	{
+		PlayerNameInput->SetText(FText::FromString(Name));
+	}
+
+	InitVolumeSlider(MainVolumeSlider, SoundTags::Default());
+	InitVolumeSlider(UIVolumeSlider, SoundTags::UI());
+	InitVolumeSlider(VoiceVolumeSlider, SoundTags::Voice());
+	InitVolumeSlider(MusicVolumeSlider, SoundTags::Music());
 	RemoveFromParent();
 }
 
@@ -160,5 +207,108 @@ void UMainSettingsUI::InitVolumeSlider(USlider* Slider, const FGameplayTag& Tag)
 	const float Value = UGuessGamerSettings::GetVolumeByTag(Tag);
 	SoundVolumeMapping.Add(Tag, Value);
 	Slider->SetValue(Value);
+}
+
+void UMainSettingsUI::GetAllAvailableResolutions()
+{
+	if (!Resolutions.IsEmpty()) return;
+
+	UKismetSystemLibrary::GetSupportedFullscreenResolutions(Resolutions);
+	auto Settings = UGameUserSettings::GetGameUserSettings();
+	if (!Settings) return;
+	if (Resolutions.IsEmpty()) return;
+	ResolutionsBox->ClearChildren();
+	ResolutionIndex = INDEX_NONE;
+	
+	auto Resolution = Settings->GetScreenResolution();
+	for (const auto& Info : Resolutions)
+	{
+		auto Text = WidgetTree->ConstructWidget<UTextBlock>();
+		auto Size = WidgetTree->ConstructWidget<USizeBox>();
+
+		Text->SetText(FText::FromString(FString::Printf(TEXT("%d x %d"), Info.X, Info.Y)));
+		Text->SetFont(ResolutionFont);
+		Text->SetJustification(ETextJustify::Type::Center);
+		Size->SetHeightOverride(TextHeight);
+		
+		Size->AddChild(Text);
+		ResolutionsBox->AddChild(Size);
+		
+		if (Resolution == Info)
+		{
+			ResolutionIndex = Resolutions.Find(Resolution);
+			ResolutionsBox->SetScrollOffset(ResolutionIndex * TextHeight);
+		}
+	}
+}
+
+namespace 
+{
+	constexpr float Rate = 0.01;
+	constexpr float Alpha = 0.1;
+	constexpr float Exp = 3;
+}
+
+void UMainSettingsUI::OnSetResolutionUp()
+{
+	if (ResolutionIndex < Resolutions.Num() - 1)
+	{
+		++ResolutionIndex;
+		if (!ResolutionChangeTimer.IsValid())
+		{
+			GetWorld()->GetTimerManager().SetTimer(
+			ResolutionChangeTimer, 
+			FTimerDelegate::CreateUObject(this, &UMainSettingsUI::InterpResolutionOffset),
+			Rate,
+			true
+			);
+		}
+	}
+
+}
+
+void UMainSettingsUI::OnSetResolutionDown()
+{
+	if (ResolutionIndex > 0)
+	{
+		--ResolutionIndex;
+		if (!ResolutionChangeTimer.IsValid())
+		{
+			GetWorld()->GetTimerManager().SetTimer(
+			ResolutionChangeTimer, 
+			FTimerDelegate::CreateUObject(this, &UMainSettingsUI::InterpResolutionOffset),
+			Rate,
+			true
+			);
+		}
+	}
+}
+
+void UMainSettingsUI::InterpResolutionOffset()
+{
+	float Cur = ResolutionsBox->GetScrollOffset();
+	float Tar = ResolutionIndex * TextHeight;
+	ResolutionsBox->SetScrollOffset(FMath::InterpEaseOut(Cur, Tar, Alpha, Exp));
+	
+	if (FMath::IsNearlyEqual(Cur, Tar))
+	{
+		ResolutionsBox->SetScrollOffset(Tar);
+		GetWorld()->GetTimerManager().ClearTimer(ResolutionChangeTimer);
+	}
+}
+
+void UMainSettingsUI::OnSetFullScreenMode()
+{
+	ScreenMode = EWindowMode::Type::Fullscreen;
+}
+
+void UMainSettingsUI::OnSetWindowedMode()
+{
+	ScreenMode = EWindowMode::Type::Windowed;
+}
+
+void UMainSettingsUI::OnSetWindowedFullScreenMode()
+{
+	ScreenMode = EWindowMode::Type::WindowedFullscreen;	
 }
 

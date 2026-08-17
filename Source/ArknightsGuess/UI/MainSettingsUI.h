@@ -32,6 +32,8 @@ class ARKNIGHTSGUESS_API UMainSettingsUI : public UUserWidget
 	
 	TWeakObjectPtr<UButton> CurrentSettingsButton;
 	
+	TWeakObjectPtr<UButton> CurrentScreenButton;
+	
 	int32 ResolutionIndex;
 	
 	TArray<FIntPoint> Resolutions;
@@ -115,6 +117,9 @@ protected:
 	
 	UFUNCTION(BlueprintCallable)
 	void ClickSettingButton(UButton* Target);
+	
+	UFUNCTION(BlueprintCallable)
+	void ClickScreenButton(UButton* Target);
 private:
 	UFUNCTION()
 	void OnSelectedIcon(UTexture2D* Icon);

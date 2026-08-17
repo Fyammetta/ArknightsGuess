@@ -25,7 +25,7 @@ protected:
 	UFUNCTION()
 	void OnGameStart();
 
-
+	virtual void InitPlayerState() override;
 public:
 	// ---- Game-control RPCs ----
 	UFUNCTION(Reliable, Server, BlueprintCallable)
@@ -40,4 +40,7 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	void PrepareForMultiply(const FString& Port);
+
+	UFUNCTION(BlueprintCallable)
+	void JoinLocalServer(const FString& Port);
 };

@@ -20,9 +20,18 @@ private:
 	UTexture2D* PlayerIcon;
 	
 public:	
+	
+	virtual void BeginPlay() override;
+	
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	virtual UTexture2D* GetPlayerIcon() const override;
 	
 	virtual void ChangePlayerIcon(UTexture2D* Icon) override;
+	
+	virtual void CopyProperties(APlayerState* PlayerState) override;
+	
+	virtual void SeamlessTravelTo(class APlayerState* NewPlayerState) override;
+	
+
 };

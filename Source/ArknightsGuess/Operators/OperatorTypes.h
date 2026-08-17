@@ -22,13 +22,13 @@ struct FOperatorImage
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSoftObjectPtr<UTexture2D> Texture;
+	TSoftObjectPtr<UTexture2D> Texture = nullptr;
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
 	int32 FootModeMultiplier = 8;
 
 	UPROPERTY(EditAnywhere,BlueprintReadWrite)
-	FVector2D FootModeOffset;
+	FVector2D FootModeOffset = {0,0};
 };
 
 USTRUCT(BlueprintType)

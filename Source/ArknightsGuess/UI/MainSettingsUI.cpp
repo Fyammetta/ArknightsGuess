@@ -25,10 +25,21 @@
 #include "Operators/OperatorUISettings.h"
 #include "UI/PlayerIconObject.h"
 
+namespace
+{
+	bool FirstOpen = true;
+}
+
 void UMainSettingsUI::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
+	if (!Resolutions.IsEmpty())
+	{
+		ResolutionsBox->SetScrollOffset(TextHeight * ResolutionIndex);
+
+		return;
+	}
+	FirstOpen = false;
 	auto Settings = UOperatorUISettings::Get();
 	if (!Settings) return;
 	
@@ -72,6 +83,7 @@ void UMainSettingsUI::NativeConstruct()
 	InitVolumeSlider(MusicVolumeSlider, SoundTags::Music());
 	
 	GetAllAvailableResolutions();
+
 }
 
 void UMainSettingsUI::ClickSettingButton(UButton* Target)
@@ -87,6 +99,21 @@ void UMainSettingsUI::ClickSettingButton(UButton* Target)
 	}
 	
 	CurrentSettingsButton = Target;
+}
+
+void UMainSettingsUI::ClickScreenButton(UButton* Target)
+{
+	if (CurrentScreenButton.IsValid())
+	{
+		CurrentScreenButton->SetBackgroundColor(NormalSettingsColor);
+	}
+	
+	if (Target)
+	{
+		Target->SetBackgroundColor(CurrentSettingsColor);
+	}
+	
+	CurrentScreenButton = Target;
 }
 
 void UMainSettingsUI::OnSelectedIcon(UTexture2D* Icon)
@@ -131,6 +158,7 @@ void UMainSettingsUI::OnSaveClicked()
 		if (ScreenMode == EWindowMode::Type::Fullscreen)
 		{
 			Settings->SetScreenResolution(Resolutions.Last());
+			ResolutionIndex = Resolutions.Num() - 1;
 		}
 		else
 		{
@@ -211,8 +239,6 @@ void UMainSettingsUI::InitVolumeSlider(USlider* Slider, const FGameplayTag& Tag)
 
 void UMainSettingsUI::GetAllAvailableResolutions()
 {
-	if (!Resolutions.IsEmpty()) return;
-
 	UKismetSystemLibrary::GetSupportedFullscreenResolutions(Resolutions);
 	auto Settings = UGameUserSettings::GetGameUserSettings();
 	if (!Settings) return;
@@ -239,6 +265,21 @@ void UMainSettingsUI::GetAllAvailableResolutions()
 			ResolutionIndex = Resolutions.Find(Resolution);
 			ResolutionsBox->SetScrollOffset(ResolutionIndex * TextHeight);
 		}
+	}
+	
+		
+	switch (UGuessGamerSettings::GetGameUserSettings()->GetFullscreenMode())
+	{
+	case EWindowMode::Type::Windowed:
+		OnSetWindowedMode();
+		break;
+	case EWindowMode::Type::Fullscreen:
+		OnSetFullScreenMode();
+		break;
+	case EWindowMode::Type::WindowedFullscreen:
+		OnSetWindowedFullScreenMode();
+		break;
+	default:;
 	}
 }
 
@@ -300,15 +341,18 @@ void UMainSettingsUI::InterpResolutionOffset()
 void UMainSettingsUI::OnSetFullScreenMode()
 {
 	ScreenMode = EWindowMode::Type::Fullscreen;
+	ClickScreenButton(FullScreenButton);
 }
 
 void UMainSettingsUI::OnSetWindowedMode()
 {
 	ScreenMode = EWindowMode::Type::Windowed;
+	ClickScreenButton(WindowedButton);
 }
 
 void UMainSettingsUI::OnSetWindowedFullScreenMode()
 {
-	ScreenMode = EWindowMode::Type::WindowedFullscreen;	
+	ScreenMode = EWindowMode::Type::WindowedFullscreen;
+	ClickScreenButton(WindowedFullscreenButton);
 }
 

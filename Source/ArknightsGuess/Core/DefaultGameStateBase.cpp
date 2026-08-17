@@ -7,6 +7,7 @@
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "ArknightsGuess.h"
+#include "GameFramework/PlayerState.h"
 
 ADefaultGameStateBase::ADefaultGameStateBase()
 {
@@ -17,6 +18,18 @@ void ADefaultGameStateBase::BeginPlay()
 	UE_LOG(LogArknights, Log, TEXT("[DefaultGS] BeginPlay | Authority=%d"), HasAuthority());
 	Super::BeginPlay();
 	GenerateGameplayComponent();
+}
+
+void ADefaultGameStateBase::AddPlayerState(APlayerState* PlayerState)
+{
+	Super::AddPlayerState(PlayerState);
+	OnMultiplayerNumChanged.Broadcast(PlayerState, true);
+}
+
+void ADefaultGameStateBase::RemovePlayerState(APlayerState* PlayerState)
+{
+	Super::RemovePlayerState(PlayerState);
+	OnMultiplayerNumChanged.Broadcast(PlayerState, false);
 }
 
 void ADefaultGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -135,4 +148,9 @@ void ADefaultGameStateBase::GenerateGameplayComponent()
 
 	GuessComponent = Cast<IUGuessComponentInterface>(Comp);
 	UE_LOG(LogArknights, Log, TEXT("[DefaultGS] GenerateGameplayComponent | Mode=%s | Component=%s"), *Mode.ToString(), *Class->GetName());
+}
+
+void ADefaultGameStateBase::NetMulticast_BroadcastPlayerNumChange_Implementation(APlayerState* Player, bool bJoin)
+{
+	OnMultiplayerNumChanged.Broadcast(Player,bJoin);
 }

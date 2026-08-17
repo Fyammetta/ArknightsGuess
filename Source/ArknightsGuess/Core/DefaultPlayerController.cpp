@@ -10,7 +10,9 @@
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "ArknightsGuess.h"
 #include "GuessGame/GuessGameSettings.h"
+#include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
+#include "UI/PlayerIconInterface.h"
 
 // ============================================================
 //  UI lifecycle
@@ -33,13 +35,6 @@ void ADefaultPlayerController::BeginPlay()
 	{
 		Sub->OnGuessGameStart.AddDynamic(this, &ADefaultPlayerController::OnGameStart);
 	}
-
-
-	if (auto* UIMgr = UUIManagerSubsystem::Get(this))
-	{
-		UIMgr->ShowUI(UITags::MainEntry());
-	}
-	
 }
 
 void ADefaultPlayerController::OnGameStart()
@@ -53,6 +48,26 @@ void ADefaultPlayerController::OnGameStart()
 	if (Settings && Mode.IsValid() && Settings->ModeLevels.Contains(Mode))
 	{
 		UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Mode], false);
+
+	}
+}
+
+void ADefaultPlayerController::InitPlayerState()
+{
+	UTexture2D* Icon = nullptr;
+	if (auto* IconInterface = Cast<IPlayerIconInterface>(PlayerState))
+	{
+		Icon = IconInterface->GetPlayerIcon();
+	}
+
+	Super::InitPlayerState();
+
+	if (Icon)
+	{
+		if (auto* IconInterface = Cast<IPlayerIconInterface>(PlayerState))
+		{
+			IconInterface->ChangePlayerIcon(Icon);
+		}
 	}
 }
 
@@ -62,9 +77,23 @@ void ADefaultPlayerController::PrepareForMultiply(const FString& Port)
 	auto Tag = MapTags::MultiRoom();
 	if (Settings && Settings->ModeLevels.Contains(Tag))
 	{
-		FString Option = FString::Printf(TEXT("listen -port=%s"),*Port);
-		UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Tag], true, /*Option*/TEXT("listen"));
+			
+		//UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Tag], true, /*Option*/TEXT("listen"));
+		
+		auto Map = Settings->ModeLevels[Tag];
+		FString URL = Map.LoadSynchronous()->GetMapName();
+		GEngine->CreateNamedNetDriver(GetWorld(),NAME_GameNetDriver,FName("Self"));
+		GetWorld()->Listen(GetWorld()->URL);
+		GetWorld()->SeamlessTravel(URL,true);
 	}
+}
+
+void ADefaultPlayerController::JoinLocalServer(const FString& Port)
+{
+	UE_LOG(LogArknights, Log, TEXT("[PC] JoinLocalServer | Port=%s"), *Port);
+
+	FString URL = FString::Printf(TEXT("127.0.0.1:%s"), *Port);
+	ClientTravel(URL, TRAVEL_Absolute);
 }
 
 // ============================================================

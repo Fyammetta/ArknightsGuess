@@ -33,7 +33,7 @@ namespace
 void UMainSettingsUI::NativeConstruct()
 {
 	Super::NativeConstruct();
-	if (!Resolutions.IsEmpty())
+	if (!Resolutions.IsEmpty() && FirstOpen)
 	{
 		ResolutionsBox->SetScrollOffset(TextHeight * ResolutionIndex);
 
@@ -153,19 +153,27 @@ void UMainSettingsUI::OnSaveClicked()
 	{
 		UGuessGamerSettings::SetVolumeByTag(Pair.Key, Pair.Value);
 	}
-	if (auto Settings = UGameUserSettings::GetGameUserSettings())
+	if (!Resolutions.IsEmpty())
 	{
-		if (ScreenMode == EWindowMode::Type::Fullscreen)
+		if (auto Settings = UGameUserSettings::GetGameUserSettings())
 		{
-			Settings->SetScreenResolution(Resolutions.Last());
-			ResolutionIndex = Resolutions.Num() - 1;
+			if (!Resolutions.IsEmpty())
+			{
+				if (ScreenMode == EWindowMode::Type::Fullscreen)
+				{
+					Settings->SetScreenResolution(Resolutions.Last());
+					ResolutionIndex = Resolutions.Num() - 1;
+				}
+				else
+				{
+					ResolutionIndex = FMath::Clamp(ResolutionIndex, 0, Resolutions.Num() - 1);
+					Settings->SetScreenResolution(Resolutions[ResolutionIndex]);
+				}
+			}
+			Settings->SetFullscreenMode(ScreenMode);
 		}
-		else
-		{
-			Settings->SetScreenResolution(Resolutions[ResolutionIndex]);
-		}
-		Settings->SetFullscreenMode(ScreenMode);
 	}
+
 	UGuessGamerSettings::Get()->ApplySettings(true);
 
 	RemoveFromParent();
@@ -242,11 +250,16 @@ void UMainSettingsUI::GetAllAvailableResolutions()
 	UKismetSystemLibrary::GetSupportedFullscreenResolutions(Resolutions);
 	auto Settings = UGameUserSettings::GetGameUserSettings();
 	if (!Settings) return;
-	if (Resolutions.IsEmpty()) return;
+	if (Resolutions.IsEmpty())
+	{
+		DisplaySettingsButton->SetVisibility(ESlateVisibility::Collapsed);
+		return;
+	}
 	ResolutionsBox->ClearChildren();
 	ResolutionIndex = INDEX_NONE;
 	
 	auto Resolution = Settings->GetScreenResolution();
+
 	for (const auto& Info : Resolutions)
 	{
 		auto Text = WidgetTree->ConstructWidget<UTextBlock>();
@@ -265,6 +278,11 @@ void UMainSettingsUI::GetAllAvailableResolutions()
 			ResolutionIndex = Resolutions.Find(Resolution);
 			ResolutionsBox->SetScrollOffset(ResolutionIndex * TextHeight);
 		}
+	}
+
+	if (ResolutionIndex == INDEX_NONE)
+	{
+		ResolutionIndex = Resolutions.Num() / 2;
 	}
 	
 		

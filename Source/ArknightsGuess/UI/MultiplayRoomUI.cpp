@@ -5,12 +5,13 @@
 
 #include "ArknightsGuess.h"
 #include "PlayerIconInterface.h"
+#include "SocketSubsystem.h"
+#include "Components/TextBlock.h"
 #include "Components/TileView.h"
 #include "Components/WidgetSwitcher.h"
 #include "Core/DefaultGameStateBase.h"
 #include "GameFramework/GameState.h"
 #include "GameFramework/PlayerState.h"
-
 namespace 
 {
 	constexpr float DefaultTileSize = 1200;
@@ -33,9 +34,15 @@ void UMultiplayRoomUI::NativeConstruct()
 		if (!GS->PlayerArray.IsEmpty())
 			OnPlayerJoinedOrLeft(World->GetFirstPlayerController()->GetPlayerState<APlayerState>(),true);
 		GS->OnMultiplayerNumChanged.AddUniqueDynamic(this,  &UMultiplayRoomUI::OnPlayerJoinedOrLeft);
-	
 
-	
+	bool bCanBind = false;
+	TSharedRef<FInternetAddr> LocalIp = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->GetLocalHostAddr(*GLog, bCanBind);
+
+	if(LocalIp->IsValid())
+	{
+		IP_DisplayText->SetText(FText::FromString(LocalIp->ToString(false)));
+	}
+	PORT_DisplayText->SetText(FText::FromString(FString::FromInt(World->URL.Port)));
 }
 
 bool UMultiplayRoomUI::UpdateSize()

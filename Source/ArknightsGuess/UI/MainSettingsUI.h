@@ -43,6 +43,9 @@ class ARKNIGHTSGUESS_API UMainSettingsUI : public UUserWidget
 	EWindowMode::Type ScreenMode;
 	
 protected:
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	UButton* DisplaySettingsButton;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FLinearColor CurrentSettingsColor;
 	

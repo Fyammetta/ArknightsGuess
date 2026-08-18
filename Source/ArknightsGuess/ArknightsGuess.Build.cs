@@ -22,6 +22,7 @@ public class ArknightsGuess : ModuleRules
 			"DevNotification",
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils",
+			"Sockets",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {

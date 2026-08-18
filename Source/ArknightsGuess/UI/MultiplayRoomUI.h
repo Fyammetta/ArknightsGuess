@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "MultiplayRoomUI.generated.h"
 
+class UTextBlock;
 class UTileView;
 class UWidgetSwitcher;
 /**
@@ -23,6 +24,12 @@ class ARKNIGHTSGUESS_API UMultiplayRoomUI : public UUserWidget
 	
 	UPROPERTY(EditDefaultsOnly, meta = (BindWidget))
 	UTileView* PlayerList;
+	
+	UPROPERTY(EditDefaultsOnly, meta = (BindWidget))
+	UTextBlock* PORT_DisplayText;
+	
+	UPROPERTY(EditDefaultsOnly, meta = (BindWidget))
+	UTextBlock* IP_DisplayText;
 	
 	virtual void NativeConstruct() override;
 	

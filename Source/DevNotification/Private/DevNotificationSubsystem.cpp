@@ -5,6 +5,13 @@
 #include "Blueprint/UserWidget.h"
 #include "TimerManager.h"
 
+UDevNotificationSubsystem* UDevNotificationSubsystem::Get(UObject* WorldContextObject)
+{
+	if (!WorldContextObject || !WorldContextObject->GetWorld() || !WorldContextObject->GetWorld()->GetGameInstance()) return nullptr;
+	
+	return WorldContextObject->GetWorld()->GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>();
+}
+
 void UDevNotificationSubsystem::Deinitialize()
 {
 	if (DismissTimer.IsValid())

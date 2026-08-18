@@ -18,4 +18,7 @@ class ARKNIGHTSGUESS_API UGuessGameInstance : public UGameInstance
 	
 	void SetupResolution();
 	void StartAudio();
+	
+	void OnNetConnectFailed(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureReason, const FString& ErrorMessage);
+	void OnTravelFailed(UWorld* World, ETravelFailure::Type FailureReason, const FString& ErrorMessage);
 };

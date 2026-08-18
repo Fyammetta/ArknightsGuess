@@ -7,6 +7,8 @@
 #include "Blueprint/UserWidget.h"
 #include "GameMainUI.generated.h"
 
+class UScrollBox;
+class UEditableText;
 class UButton;
 class UWidgetSwitcher;
 class USlider;
@@ -15,6 +17,7 @@ class UImage;
 class UBorder;
 class UWidgetAnimation;
 class UComboBoxString;
+class USearchRoomEntry;
 
 /**
  * Main menu / settings UI for the operator guessing game.
@@ -26,14 +29,34 @@ class ARKNIGHTSGUESS_API UGameMainUI : public UUserWidget
 {
 	GENERATED_BODY()
 
+	FDelegateHandle SearchHandle;
+	
 protected:
 	// ---- Play mode buttons ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UButton> SoloPlayButton;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<UButton> MultiPlayButton;
-
+	TObjectPtr<UButton> CreateRoomButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UButton> ConfirmCreateRoomButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UButton> CancelRoomButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UButton> JoinRoomButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UButton> ConfirmJoinRoomButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UButton> SearchRoomButton;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UScrollBox> RoomList;
+	
 	// ---- Sub-widget switcher ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UWidgetSwitcher> SubWidgetSwitcher;
@@ -98,7 +121,16 @@ protected:
 	// ---- Settings container ----
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UBorder> SettingsBorder;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UEditableText> RoomNameInputText;
 
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UEditableText> PortInputText;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UEditableText> ServerAddressInputText;
+	
 	// ---- Animation ----
 	UPROPERTY(Transient, BlueprintReadOnly, meta = (BindWidgetAnim))
 	TObjectPtr<UWidgetAnimation> ShowSettingsWidget;
@@ -116,6 +148,11 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FVector> PartDetails;
 
+	// ---- Room search ----
+	/** Entry widget class for the room-search result list. Assigned by blueprint. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf<USearchRoomEntry> SearchRoomEntryClass;
+
 
 public:
 	virtual void NativeConstruct() override;
@@ -123,7 +160,7 @@ public:
 
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
-protected:
+private:
 	// ---- Slider callbacks ----
 	UFUNCTION()
 	void OnLevelSliderChanged(float Value);
@@ -142,7 +179,16 @@ protected:
 	void OnSoloPlayClicked();
 
 	UFUNCTION()
-	void OnMultiPlayClicked();
+	void OnCreateRoomClicked();
+	
+	UFUNCTION()
+	void OnMultiCreateClicked();
+	
+	UFUNCTION()
+	void OnMultiSearchClicked();
+	
+	UFUNCTION()
+	void OnMultiJoinClicked();
 
 	UFUNCTION()
 	void OnMosaicModeClicked();
@@ -158,12 +204,16 @@ protected:
 	
 	UFUNCTION()
 	void OnSettingsClicked();
+	
+	UFUNCTION()
+	void OnJoinRoomClicked();
+	
+	void OnLocalServerSearchComplete(bool bWasSuccessful);
 
 	// ---- ComboBox callbacks ----
 	UFUNCTION()
 	void OnPartSelectionChanged(FString SelectedItem, ESelectInfo::Type SelectionType);
-
-private:
+	
 	void BindSliders();
 	void BindButtons();
 	void ExchangeButtonStyle();

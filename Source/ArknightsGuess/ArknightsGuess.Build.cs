@@ -20,6 +20,8 @@ public class ArknightsGuess : ModuleRules
 			"NetCore",
 			"UMG",
 			"DevNotification",
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {

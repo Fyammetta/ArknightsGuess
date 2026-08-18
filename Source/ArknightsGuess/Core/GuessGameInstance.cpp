@@ -3,8 +3,10 @@
 
 #include "GuessGameInstance.h"
 #include "ArknightsGuess.h"
+#include "DevNotificationSubsystem.h"
 #include "Audio/GuessAudioSettings.h"
 #include "Audio/GuessAudioSubsystem.h"
+#include "Engine/NetworkSettings.h"
 #include "GameFramework/GameUserSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -16,6 +18,8 @@ void UGuessGameInstance::OnStart()
 
 	SetupResolution();
 	StartAudio();
+	GEngine->OnNetworkFailure().AddUObject(this,&UGuessGameInstance::OnNetConnectFailed);
+	GEngine->OnTravelFailure().AddUObject(this,&UGuessGameInstance::OnTravelFailed);
 }
 
 void UGuessGameInstance::SetupResolution()
@@ -55,4 +59,23 @@ void UGuessGameInstance::StartAudio()
 	{
 		AudioSub->ApplySavedVolumes();
 	}
+}
+
+void UGuessGameInstance::OnNetConnectFailed(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureReason, const FString& ErrorMessage)
+{
+	FString Msg = ErrorMessage + FString::Printf(TEXT(", code = %d"), FailureReason);
+	
+	if (auto Subsystem = World->GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
+		Subsystem->ShowNotification(Msg);
+	
+}
+
+void UGuessGameInstance::OnTravelFailed(UWorld* World, ETravelFailure::Type FailureReason, const FString& ErrorMessage)
+{
+	FString Msg = ErrorMessage + FString::Printf(TEXT(", code = %d"), FailureReason);
+	
+	if (auto Subsystem = World->GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
+		Subsystem->ShowNotification(Msg);
+	
+	
 }

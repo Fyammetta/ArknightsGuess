@@ -9,6 +9,9 @@
 #include "ArknightsGuess/UI/UIManagerSubsystem.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "ArknightsGuess.h"
+#include "DevNotificationSubsystem.h"
+#include "Online.h"
+#include "OnlineSessionSettings.h"
 #include "GuessGame/GuessGameSettings.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
@@ -35,6 +38,7 @@ void ADefaultPlayerController::BeginPlay()
 	{
 		Sub->OnGuessGameStart.AddDynamic(this, &ADefaultPlayerController::OnGameStart);
 	}
+	Search = MakeShared<FOnlineSessionSearch>();
 }
 
 void ADefaultPlayerController::OnGameStart()
@@ -71,29 +75,88 @@ void ADefaultPlayerController::InitPlayerState()
 	}
 }
 
-void ADefaultPlayerController::PrepareForMultiply(const FString& Port)
+void ADefaultPlayerController::PrepareForMultiply(const FString& RoomName, const FString& Port)
 {
-	auto* Settings = UGuessGameSettings::Get();
-	auto Tag = MapTags::MultiRoom();
-	if (Settings && Settings->ModeLevels.Contains(Tag))
+	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface();
+	FUniqueNetIdRepl Local = GetLocalPlayer()->GetPreferredUniqueNetId();
+	if (!SessionPtr.IsValid() || !Local.IsValid()) return;
+	
+	FOnlineSessionSettings Settings;
+	Settings.bIsLANMatch = true;
+	Settings.bShouldAdvertise = true;
+	Settings.bUsesPresence = false;
+	Settings.bAllowJoinInProgress = false;
+	Settings.NumPublicConnections = 15;
+	
+	Settings.Set(TEXT("RoomName"), RoomName , EOnlineDataAdvertisementType::ViaOnlineService);
+
+	
+	FOnCreateSessionCompleteDelegate Delegate = FOnCreateSessionCompleteDelegate::CreateWeakLambda(
+	this, 
+	[World = TWeakObjectPtr<UWorld>(GetWorld())](FName,bool)
 	{
-			
-		//UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Tag], true, /*Option*/TEXT("listen"));
-		
-		auto Map = Settings->ModeLevels[Tag];
-		FString URL = Map.LoadSynchronous()->GetMapName();
-		GEngine->CreateNamedNetDriver(GetWorld(),NAME_GameNetDriver,FName("Self"));
-		GetWorld()->Listen(GetWorld()->URL);
-		GetWorld()->SeamlessTravel(URL,true);
+		auto* Settings = UGuessGameSettings::Get();
+		auto Tag = MapTags::MultiRoom();
+		if (World.IsValid() && Settings && Settings->ModeLevels.Contains(Tag))
+		{
+			auto Map = Settings->ModeLevels[Tag];
+	
+			World->SeamlessTravel(Map.LoadSynchronous()->GetMapName(),true);
+		}
+	});
+	FURL WorldUrl = GetWorld()->URL;
+	if (!Port.IsEmpty())
+		WorldUrl.Port = FCString::Atoi(*Port);
+	if (	GetWorld()->Listen(WorldUrl))
+	{
+		SessionPtr->AddOnCreateSessionCompleteDelegate_Handle(Delegate);
+		SessionPtr->CreateSession(*Local, NAME_GameSession, Settings);
 	}
+	else
+	{
+		UDevNotificationSubsystem::Get(this)->ShowNotification(TEXT("Invalid Port, change it and try again"));
+	}
+
 }
 
-void ADefaultPlayerController::JoinLocalServer(const FString& Port)
+void ADefaultPlayerController::JoinServer(const FString& Url)
 {
-	UE_LOG(LogArknights, Log, TEXT("[PC] JoinLocalServer | Port=%s"), *Port);
+	UE_LOG(LogArknights, Log, TEXT("[PC] JoinServer | Url=%s"), *Url);
+	
+	ClientTravel(Url, TRAVEL_Absolute);
+}
 
-	FString URL = FString::Printf(TEXT("127.0.0.1:%s"), *Port);
-	ClientTravel(URL, TRAVEL_Absolute);
+void ADefaultPlayerController::JoinServer(const FOnlineSessionSearchResult& Session)
+{
+	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface();
+	JoinServer(Session.GetSessionIdStr());
+}
+
+bool ADefaultPlayerController::TryFindLocalServer(FOnFindSessionsCompleteDelegate&& Delegate, FDelegateHandle& OutHandle)
+{
+	if (!Delegate.IsBound()) return false;
+	
+	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface();
+	if (!Search.IsValid())
+		Search = MakeShared<FOnlineSessionSearch>();
+	Search->bIsLanQuery = true;
+	Search->MaxSearchResults = 10;
+
+	FUniqueNetIdRepl Local = GetLocalPlayer()->GetPreferredUniqueNetId();
+	if (!OutHandle.IsValid())
+		OutHandle = SessionPtr->AddOnFindSessionsCompleteDelegate_Handle(Delegate);
+
+	return SessionPtr->FindSessions(*Local, Search.ToSharedRef());
+}
+
+const TArray<FOnlineSessionSearchResult>& ADefaultPlayerController::GetAllSessions() const
+{
+	if (!Search.IsValid())
+	{
+		static const TArray<FOnlineSessionSearchResult> EmptyResults;
+		return EmptyResults;
+	}
+	return Search->SearchResults;
 }
 
 // ============================================================

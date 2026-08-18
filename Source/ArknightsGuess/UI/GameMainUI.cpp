@@ -19,7 +19,11 @@
 #include "Components/WidgetSwitcher.h"
 #include "DevNotification/Public/DevNotificationSubsystem.h"
 #include "ArknightsGuess.h"
+#include "OnlineSessionSettings.h"
+#include "SearchRoomEntry.h"
 #include "UIManagerSubsystem.h"
+#include "Components/EditableText.h"
+#include "Components/ScrollBox.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -142,13 +146,19 @@ void UGameMainUI::BindButtons()
 	if (Button)\
 		Button->OnClicked.AddUniqueDynamic(this, &UGameMainUI::Event);
 	ONCLICK(SoloPlayButton,OnSoloPlayClicked);
-	ONCLICK(MultiPlayButton,OnMultiPlayClicked);
+	ONCLICK(CreateRoomButton,OnCreateRoomClicked);
 	ONCLICK(MosaicModeButton,OnMosaicModeClicked);
 	ONCLICK(PartModeButton,OnPartModeClicked);
 	ONCLICK(StartGameButton,OnStartGameClicked);
 	ONCLICK(QuitGameButton,OnQuitGameClicked);
 	ONCLICK(SettingsButton,OnSettingsClicked);
+	ONCLICK(ConfirmCreateRoomButton,OnMultiCreateClicked);
+	ONCLICK(JoinRoomButton,OnJoinRoomClicked);
+	ONCLICK(ConfirmJoinRoomButton,OnMultiJoinClicked);
+	ONCLICK(SearchRoomButton,OnMultiSearchClicked);
+	
 
+#undef ONCLICK
 }
 
 void UGameMainUI::ExchangeButtonStyle()
@@ -234,14 +244,54 @@ void UGameMainUI::OnSoloPlayClicked()
 	bExpandedSettings = true;
 }
 
-void UGameMainUI::OnMultiPlayClicked()
+void UGameMainUI::OnCreateRoomClicked()
 {
 	
-	// SubWidgetSwitcher->SetActiveWidgetIndex(1);
-	// PlayAnimationForward(ShowSettingsWidget);
-	// bExpandedSettings = true;
+	SubWidgetSwitcher->SetActiveWidgetIndex(1);
+	PlayAnimationForward(ShowSettingsWidget);
+	bExpandedSettings = true;
 	
-	GetWorld()->GetFirstPlayerController<ADefaultPlayerController>()->PrepareForMultiply(TEXT("25565"));
+}
+
+void UGameMainUI::OnMultiCreateClicked()
+{
+	if (!GetWorld()) return;
+	if (auto PC = GetWorld()->GetFirstPlayerController<ADefaultPlayerController>())
+	{
+		FString RoomName = RoomNameInputText->GetText().ToString();
+		if (RoomName.IsEmpty())
+		{
+			DEV_ONSCREEN_TIPS(TEXT("Room name should not be empty!"));
+			return;
+		}
+		
+		PC->PrepareForMultiply(RoomNameInputText->GetText().ToString(), PortInputText->GetText().ToString());
+	}
+
+
+}
+
+void UGameMainUI::OnMultiSearchClicked()
+{
+	if (!GetWorld()) return;
+	if (auto PC = GetWorld()->GetFirstPlayerController<ADefaultPlayerController>())
+	{
+		FString RoomName = RoomNameInputText->GetText().ToString();
+		if (!PC->TryFindLocalServer(FOnFindSessionsCompleteDelegate::CreateUObject(this,&UGameMainUI::OnLocalServerSearchComplete), SearchHandle))
+		{
+			DEV_ONSCREEN_TIPS(TEXT("Fail to find server!"));
+		}
+	}
+}
+
+void UGameMainUI::OnMultiJoinClicked()
+{
+	if (!GetWorld()) return;
+	if (auto PC = GetWorld()->GetFirstPlayerController<ADefaultPlayerController>())
+	{
+		FString RoomName = RoomNameInputText->GetText().ToString();
+		PC->JoinServer(ServerAddressInputText->GetText().ToString());
+	}
 }
 
 void UGameMainUI::OnMosaicModeClicked()
@@ -321,4 +371,38 @@ void UGameMainUI::OnSettingsClicked()
 	if (!Subsystem) return;
 		
 	Subsystem->ShowUI(UITags::Settings());
+}
+
+void UGameMainUI::OnJoinRoomClicked()
+{
+	SubWidgetSwitcher->SetActiveWidgetIndex(2);
+	PlayAnimationForward(ShowSettingsWidget);
+	bExpandedSettings = true;
+}
+
+void UGameMainUI::OnLocalServerSearchComplete(bool bWasSuccessful)
+{
+	if (!bWasSuccessful)
+	{
+		DEV_ONSCREEN_TIPS(TEXT("Fail to find server!"));
+		return;
+	}
+	auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<ADefaultPlayerController>() : nullptr;
+	if (!PC)
+	{
+		return;
+	}
+	if (!SearchRoomEntryClass)
+	{
+		DEV_ONSCREEN_TIPS(TEXT("SearchRoomEntryClass not set!"));
+		return;
+	}
+	RoomList->ClearChildren();
+	for (const FOnlineSessionSearchResult& Session : PC->GetAllSessions())
+	{
+		auto* Entry = CreateWidget<USearchRoomEntry>(this, SearchRoomEntryClass);
+		if (!Entry) continue;
+		Entry->InitEntry(Session);
+		RoomList->AddChild(Entry);
+	}
 }

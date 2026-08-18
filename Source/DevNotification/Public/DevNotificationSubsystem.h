@@ -10,6 +10,9 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FDevNotificationShowDelegate, const FString&, Body);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDevNotificationDismissDelegate);
 
+#define DEV_ONSCREEN_TIPS(Notification)	\
+	UDevNotificationSubsystem::Get(this)->ShowNotification(Notification);
+
 /**
  * Manages a single reusable notification popup.
  * Only one notification exists at a time — new requests overwrite the previous one.
@@ -20,6 +23,8 @@ class DEVNOTIFICATION_API UDevNotificationSubsystem : public UGameInstanceSubsys
 	GENERATED_BODY()
 
 public:
+	static UDevNotificationSubsystem* Get(UObject* WorldContextObject);
+	
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override { return true; }
 	virtual void Deinitialize() override;
 

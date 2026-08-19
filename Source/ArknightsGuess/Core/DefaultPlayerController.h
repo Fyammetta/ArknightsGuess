@@ -8,6 +8,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Interfaces/OnlineSessionDelegates.h"
 #include "OnlineSessionSettings.h"
+#include "LanDiscoverySubsystem.h"
 #include "DefaultPlayerController.generated.h"
 
 struct FOperatorImage;
@@ -54,4 +55,11 @@ public:
 	bool TryFindLocalServer(FOnFindSessionsCompleteDelegate&& Delegate, FDelegateHandle& OutHandle);
 	
 	const TArray<FOnlineSessionSearchResult>& GetAllSessions() const;
+
+	/** 方案3:自建 UDP 局域网发现(热点下可用)。 */
+	UFUNCTION(BlueprintCallable)
+	bool TryFindLocalServerDirect();
+
+	/** 方案3:直连一个自建发现到的房间(用 BestIP:GamePort)。 */
+	void JoinDiscoveredRoom(const FLanRoomInfo& Room);
 };

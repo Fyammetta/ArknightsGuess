@@ -18,6 +18,7 @@
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/PlayerIconInterface.h"
+#include "LanDiscoverySubsystem.h"
 
 // ============================================================
 //  UI lifecycle
@@ -96,6 +97,12 @@ void ADefaultPlayerController::PrepareForMultiply(const FString& RoomName, const
 		return;
 	}
 	UE_LOG(LogArknights, Log, TEXT("[PC] Listen OK | Port=%d | Room=%s"), WorldUrl.Port, *RoomName);
+
+	// 方案3:自建 UDP 广播广告(绑定 0.0.0.0,安卓热点下 PC 也能搜到)
+	if (auto* Lan = GetGameInstance()->GetSubsystem<ULanDiscoverySubsystem>())
+	{
+		Lan->StartAdvertising(RoomName, WorldUrl.Port);
+	}
 
 	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface();
 	FUniqueNetIdRepl Local = GetLocalPlayer()->GetPreferredUniqueNetId();
@@ -190,6 +197,34 @@ const TArray<FOnlineSessionSearchResult>& ADefaultPlayerController::GetAllSessio
 		return EmptyResults;
 	}
 	return Search->SearchResults;
+}
+
+bool ADefaultPlayerController::TryFindLocalServerDirect()
+{
+	if (auto* Lan = GetGameInstance()->GetSubsystem<ULanDiscoverySubsystem>())
+	{
+		return Lan->StartSearching();
+	}
+	UE_LOG(LogArknights, Warning, TEXT("[PC] TryFindLocalServerDirect: LanDiscoverySubsystem missing"));
+	return false;
+}
+
+void ADefaultPlayerController::JoinDiscoveredRoom(const FLanRoomInfo& Room)
+{
+	FString Host = Room.BestIP;
+	if (Host.IsEmpty() && Room.IPs.Num() > 0)
+	{
+		Host = Room.IPs[0];
+	}
+	if (Host.IsEmpty())
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[PC] JoinDiscoveredRoom: no IP for room '%s'"), *Room.RoomName);
+		return;
+	}
+
+	const FString Url = FString::Printf(TEXT("%s:%d"), *Host, Room.GamePort > 0 ? Room.GamePort : 7777);
+	UE_LOG(LogArknights, Log, TEXT("[PC] JoinDiscoveredRoom | Room=%s | Url=%s"), *Room.RoomName, *Url);
+	ClientTravel(Url, TRAVEL_Absolute);
 }
 
 // ============================================================

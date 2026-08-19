@@ -21,6 +21,7 @@
 #include "ArknightsGuess.h"
 #include "OnlineSessionSettings.h"
 #include "SearchRoomEntry.h"
+#include "ArknightsGuess/Core/LanDiscoverySubsystem.h"
 #include "UIManagerSubsystem.h"
 #include "Components/EditableText.h"
 #include "Components/ScrollBox.h"
@@ -276,10 +277,25 @@ void UGameMainUI::OnMultiSearchClicked()
 	if (!GetWorld()) return;
 	if (auto PC = GetWorld()->GetFirstPlayerController<ADefaultPlayerController>())
 	{
-		FString RoomName = RoomNameInputText->GetText().ToString();
-		if (!PC->TryFindLocalServer(FOnFindSessionsCompleteDelegate::CreateUObject(this,&UGameMainUI::OnLocalServerSearchComplete), SearchHandle))
+		auto* Lan = GetGameInstance()->GetSubsystem<ULanDiscoverySubsystem>();
+		if (!Lan)
 		{
 			DEV_ONSCREEN_TIPS(TEXT("Fail to find server!"));
+			return;
+		}
+
+		// 自建发现是持续刷新的,绑定刷新回调(先解绑避免重复绑定)
+		Lan->OnRoomsUpdated.RemoveDynamic(this, &UGameMainUI::OnLanRoomsUpdated);
+		Lan->OnRoomsUpdated.AddDynamic(this, &UGameMainUI::OnLanRoomsUpdated);
+
+		if (!PC->TryFindLocalServerDirect())
+		{
+			DEV_ONSCREEN_TIPS(TEXT("Fail to find server!"));
+		}
+		else
+		{
+			// 立即刷新一次,尽快出列表
+			OnLanRoomsUpdated();
 		}
 	}
 }
@@ -380,15 +396,11 @@ void UGameMainUI::OnJoinRoomClicked()
 	bExpandedSettings = true;
 }
 
-void UGameMainUI::OnLocalServerSearchComplete(bool bWasSuccessful)
+void UGameMainUI::OnLanRoomsUpdated()
 {
-	if (!bWasSuccessful)
-	{
-		DEV_ONSCREEN_TIPS(TEXT("Fail to find server!"));
-		return;
-	}
-	auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<ADefaultPlayerController>() : nullptr;
-	if (!PC)
+	auto* PC = GetWorld() ? GetWorld()->GetFirstPlayerController<ADefaultPlayerController>() : nullptr;
+	auto* Lan = GetGameInstance() ? GetGameInstance()->GetSubsystem<ULanDiscoverySubsystem>() : nullptr;
+	if (!PC || !Lan)
 	{
 		return;
 	}
@@ -397,13 +409,16 @@ void UGameMainUI::OnLocalServerSearchComplete(bool bWasSuccessful)
 		DEV_ONSCREEN_TIPS(TEXT("SearchRoomEntryClass not set!"));
 		return;
 	}
+
 	RoomList->ClearChildren();
-	UE_LOG(LogArknights, Log, TEXT("[MainUI] Local server search complete, find %d sessions"), PC->GetAllSessions().Num());
-	for (const FOnlineSessionSearchResult& Session : PC->GetAllSessions())
+
+	const TArray<FLanRoomInfo>& Rooms = Lan->GetFoundRooms();
+	UE_LOG(LogArknights, Log, TEXT("[MainUI] Lan discovery refreshed, %d rooms"), Rooms.Num());
+	for (const FLanRoomInfo& Room : Rooms)
 	{
 		auto* Entry = CreateWidget<USearchRoomEntry>(this, SearchRoomEntryClass);
 		if (!Entry) continue;
-		Entry->InitEntry(Session);
+		Entry->InitEntry(Room);
 		RoomList->AddChild(Entry);
 	}
 }

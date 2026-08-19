@@ -8,8 +8,6 @@
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
-#include "OnlineSubsystem.h"
-#include "Interfaces/OnlineSessionInterface.h"
 
 void USearchRoomEntry::NativeConstruct()
 {
@@ -27,29 +25,29 @@ void USearchRoomEntry::NativeDestruct()
 	Super::NativeDestruct();
 }
 
-void USearchRoomEntry::InitEntry(const FOnlineSessionSearchResult& InResult)
+void USearchRoomEntry::InitEntry(const FLanRoomInfo& InRoom)
 {
-	Target = InResult;
+	Target = InRoom;
 
 	if (Text_RoomName)
 	{
-		FString RoomName;
-		if (!Target.Session.SessionSettings.Get(TEXT("RoomName"), RoomName) || RoomName.IsEmpty())
-			RoomName = Target.Session.OwningUserName;
-		Text_RoomName->SetText(FText::FromString(RoomName));
+		Text_RoomName->SetText(FText::FromString(Target.RoomName));
 	}
 
 	if (Text_PlayerNum)
 	{
-		const int32 MaxPlayers = Target.Session.SessionSettings.NumPublicConnections;
-		const int32 CurrentPlayers = FMath::Max(MaxPlayers - Target.Session.NumOpenPublicConnections, 0);
-		Text_PlayerNum->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), CurrentPlayers, MaxPlayers)));
+		// 自建发现不携带玩家数,这里显示房间的可达地址,便于核对
+		FString Addr = Target.BestIP.IsEmpty() ? (Target.IPs.Num() > 0 ? Target.IPs[0] : FString()) : Target.BestIP;
+		Text_PlayerNum->SetText(FText::FromString(Addr));
 	}
 
 	if (Image_Ping)
 	{
 		auto Material = Image_Ping->GetDynamicMaterial();
-		Material->SetScalarParameterValue(FName("Ping"), Target.PingInMs);
+		if (Material)
+		{
+			Material->SetScalarParameterValue(FName("Ping"), Target.PingMs);
+		}
 	}
 }
 
@@ -57,6 +55,6 @@ void USearchRoomEntry::OnSelectClicked()
 {
 	if (auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<ADefaultPlayerController>() : nullptr)
 	{
-		PC->JoinServer(Target);
+		PC->JoinDiscoveredRoom(Target);
 	}
 }

@@ -208,7 +208,9 @@ private:
 	UFUNCTION()
 	void OnJoinRoomClicked();
 	
-	void OnLocalServerSearchComplete(bool bWasSuccessful);
+	/** 方案3:自建发现房间列表刷新时重绘列表。 */
+	UFUNCTION()
+	void OnLanRoomsUpdated();
 
 	// ---- ComboBox callbacks ----
 	UFUNCTION()

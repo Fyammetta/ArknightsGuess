@@ -23,6 +23,8 @@ public class ArknightsGuess : ModuleRules
 			"OnlineSubsystem",
 			"OnlineSubsystemUtils",
 			"Sockets",
+			"Networking",
+			"ApplicationCore", // FAndroidApplication (UE5.4 安卓 JNI 头文件所在模块)
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {

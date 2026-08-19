@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "OnlineSessionSettings.h"
+#include "ArknightsGuess/Core/LanDiscoverySubsystem.h"
 #include "SearchRoomEntry.generated.h"
 
 class UImage;
@@ -33,13 +33,12 @@ protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UButton> Button_Select;
 
-	// The session this entry stands for.
-	// Plain member on purpose: FOnlineSessionSearchResult is not a reflectable type.
-	FOnlineSessionSearchResult Target;
+	// The discovered room this entry stands for (方案3 自建发现的房间信息)。
+	FLanRoomInfo Target;
 
 public:
-	/** Init the display from a search result. Called by UGameMainUI::OnLocalServerSearchComplete. */
-	void InitEntry(const FOnlineSessionSearchResult& InResult);
+	/** Init the display from a discovered room. Called by UGameMainUI::OnLanRoomsUpdated. */
+	void InitEntry(const FLanRoomInfo& InRoom);
 
 protected:
 	virtual void NativeConstruct() override;

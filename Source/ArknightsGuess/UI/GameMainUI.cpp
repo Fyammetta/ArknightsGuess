@@ -398,6 +398,7 @@ void UGameMainUI::OnLocalServerSearchComplete(bool bWasSuccessful)
 		return;
 	}
 	RoomList->ClearChildren();
+	UE_LOG(LogArknights, Log, TEXT("[MainUI] Local server search complete, find %d sessions"), PC->GetAllSessions().Num());
 	for (const FOnlineSessionSearchResult& Session : PC->GetAllSessions())
 	{
 		auto* Entry = CreateWidget<USearchRoomEntry>(this, SearchRoomEntryClass);

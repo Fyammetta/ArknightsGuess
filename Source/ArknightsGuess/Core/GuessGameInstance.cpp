@@ -64,8 +64,8 @@ void UGuessGameInstance::StartAudio()
 void UGuessGameInstance::OnNetConnectFailed(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureReason, const FString& ErrorMessage)
 {
 	FString Msg = ErrorMessage + FString::Printf(TEXT(", code = %d"), FailureReason);
-	
-	if (auto Subsystem = World->GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
+
+	if (auto Subsystem = GetSubsystem<UDevNotificationSubsystem>())
 		Subsystem->ShowNotification(Msg);
 	
 }
@@ -74,7 +74,7 @@ void UGuessGameInstance::OnTravelFailed(UWorld* World, ETravelFailure::Type Fail
 {
 	FString Msg = ErrorMessage + FString::Printf(TEXT(", code = %d"), FailureReason);
 	
-	if (auto Subsystem = World->GetGameInstance()->GetSubsystem<UDevNotificationSubsystem>())
+	if (auto Subsystem = GetSubsystem<UDevNotificationSubsystem>())
 		Subsystem->ShowNotification(Msg);
 	
 	

@@ -10,6 +10,8 @@
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "ArknightsGuess.h"
 #include "DevNotificationSubsystem.h"
+#include "IPAddress.h"
+#include "SocketSubsystem.h"
 #include "Online.h"
 #include "OnlineSessionSettings.h"
 #include "GuessGame/GuessGameSettings.h"
@@ -77,10 +79,34 @@ void ADefaultPlayerController::InitPlayerState()
 
 void ADefaultPlayerController::PrepareForMultiply(const FString& RoomName, const FString& Port)
 {
+	FURL WorldUrl = GetWorld()->URL;
+	WorldUrl.Port = Port.IsEmpty() ? 7777 : FCString::Atoi(*Port);
+	if (WorldUrl.Port <= 0 || WorldUrl.Port > 65535)
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[PC] PrepareForMultiply: invalid port '%s'"), *Port);
+		UDevNotificationSubsystem::Get(this)->ShowNotification(TEXT("Invalid Port, change it and try again"));
+		return;
+	}
+
+	// 先 Listen:不依赖 OSS,确保端口一定在监听
+	if (!GetWorld()->Listen(WorldUrl))
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[PC] Listen FAILED | Port=%d | Check firewall / port in use"), WorldUrl.Port);
+		UDevNotificationSubsystem::Get(this)->ShowNotification(TEXT("Listen failed, check port or firewall"));
+		return;
+	}
+	UE_LOG(LogArknights, Log, TEXT("[PC] Listen OK | Port=%d | Room=%s"), WorldUrl.Port, *RoomName);
+
 	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface();
 	FUniqueNetIdRepl Local = GetLocalPlayer()->GetPreferredUniqueNetId();
-	if (!SessionPtr.IsValid() || !Local.IsValid()) return;
-	
+	if (!SessionPtr.IsValid() || !Local.IsValid())
+	{
+		// 监听已生效,OSS 失败只影响"房间广播/搜索",不影响客户端用 IP 直连加入
+		UE_LOG(LogArknights, Warning, TEXT("[PC] OSS unavailable (SessionPtr valid=%d, Local valid=%d): LAN advertise skipped, direct IP join still works"),
+			SessionPtr.IsValid(), Local.IsValid());
+		return;
+	}
+
 	FOnlineSessionSettings Settings;
 	Settings.bIsLANMatch = true;
 	Settings.bShouldAdvertise = true;
@@ -90,7 +116,6 @@ void ADefaultPlayerController::PrepareForMultiply(const FString& RoomName, const
 	
 	Settings.Set(TEXT("RoomName"), RoomName , EOnlineDataAdvertisementType::ViaOnlineService);
 
-	
 	FOnCreateSessionCompleteDelegate Delegate = FOnCreateSessionCompleteDelegate::CreateWeakLambda(
 	this, 
 	[World = TWeakObjectPtr<UWorld>(GetWorld())](FName,bool)
@@ -100,36 +125,44 @@ void ADefaultPlayerController::PrepareForMultiply(const FString& RoomName, const
 		if (World.IsValid() && Settings && Settings->ModeLevels.Contains(Tag))
 		{
 			auto Map = Settings->ModeLevels[Tag];
-	
+
 			World->SeamlessTravel(Map.LoadSynchronous()->GetMapName(),true);
 		}
 	});
-	FURL WorldUrl = GetWorld()->URL;
-	if (!Port.IsEmpty())
-		WorldUrl.Port = FCString::Atoi(*Port);
-	if (	GetWorld()->Listen(WorldUrl))
-	{
-		SessionPtr->AddOnCreateSessionCompleteDelegate_Handle(Delegate);
-		SessionPtr->CreateSession(*Local, NAME_GameSession, Settings);
-	}
-	else
-	{
-		UDevNotificationSubsystem::Get(this)->ShowNotification(TEXT("Invalid Port, change it and try again"));
-	}
-
+	SessionPtr->AddOnCreateSessionCompleteDelegate_Handle(Delegate);
+	SessionPtr->CreateSession(*Local, FName(RoomName), Settings);
+	//SessionPtr->StartSession(FName(RoomName));
 }
 
 void ADefaultPlayerController::JoinServer(const FString& Url)
 {
 	UE_LOG(LogArknights, Log, TEXT("[PC] JoinServer | Url=%s"), *Url);
-	
-	ClientTravel(Url, TRAVEL_Absolute);
+
+	// 补全缺省端口,避免客户端连到端口 0
+	FString TravelUrl = Url;
+	if (!TravelUrl.Contains(TEXT(":")))
+	{
+		TravelUrl += TEXT(":7777");
+	}
+	ClientTravel(TravelUrl, TRAVEL_Absolute);
 }
 
 void ADefaultPlayerController::JoinServer(const FOnlineSessionSearchResult& Session)
 {
 	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface();
-	JoinServer(Session.GetSessionIdStr());
+	FString RoomName{};
+	Session.Session.SessionSettings.Get(TEXT("RoomName"), RoomName);
+	FString Info{};
+	SessionPtr->GetResolvedConnectString(Session,NAME_GamePort,Info);
+	UE_LOG(LogArknights, Log, TEXT("[PC] JoinServer(session) | Room=%s | Connect=%s"), *RoomName, *Info);
+	if (Info.IsEmpty())
+	{
+		UE_LOG(LogArknights, Warning, TEXT("[PC] JoinServer(session): empty connect string, fallback to session id"));
+		Info = Session.GetSessionIdStr();
+	}
+	SessionPtr->JoinSession(1,FName(RoomName),Session);
+	ClientTravel(Info, TRAVEL_Absolute);
+
 }
 
 bool ADefaultPlayerController::TryFindLocalServer(FOnFindSessionsCompleteDelegate&& Delegate, FDelegateHandle& OutHandle)

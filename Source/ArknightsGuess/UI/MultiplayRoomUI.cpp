@@ -7,6 +7,7 @@
 #include "PlayerIconInterface.h"
 #include "SocketSubsystem.h"
 #include "Core/LanDiscoverySubsystem.h"
+#include "Core/GuessPlayerState.h"
 #include "Components/TextBlock.h"
 #include "Components/TileView.h"
 #include "Components/WidgetSwitcher.h"
@@ -89,7 +90,13 @@ void UMultiplayRoomUI::OnPlayerJoinedOrLeft(APlayerState* Player, bool bWasJoine
 	TArray<UObject*> Objects {};
 	for (auto PS : GS->PlayerArray)
 	{
-		if (PS->Implements<UPlayerIconInterface>())
+		if (auto* GPS = Cast<AGuessPlayerState>(PS))
+		{
+			// 绑定头像复制回调,头像到达后刷新列表(AddUniqueDynamic 防重复绑定)
+			GPS->OnPlayerIconChanged.AddUniqueDynamic(this, &UMultiplayRoomUI::OnAnyPlayerIconChanged);
+			Objects.Add(GPS);
+		}
+		else if (PS->Implements<UPlayerIconInterface>())
 		{
 			Objects.Add(PS);
 		}
@@ -99,4 +106,10 @@ void UMultiplayRoomUI::OnPlayerJoinedOrLeft(APlayerState* Player, bool bWasJoine
 	UpdateSize();
 	PlayerList->SetEntryHeight(GetDesiredSize());
 	PlayerList->SetEntryWidth(GetDesiredSize());
+}
+
+void UMultiplayRoomUI::OnAnyPlayerIconChanged()
+{
+	// 头像复制可能晚于首次列表渲染,收到变更后重建列表
+	OnPlayerJoinedOrLeft(nullptr, true);
 }

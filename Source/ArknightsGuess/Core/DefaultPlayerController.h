@@ -9,6 +9,7 @@
 #include "Interfaces/OnlineSessionDelegates.h"
 #include "OnlineSessionSettings.h"
 #include "LanDiscoverySubsystem.h"
+#include "UObject/SoftObjectPath.h"
 #include "DefaultPlayerController.generated.h"
 
 struct FOperatorImage;
@@ -28,6 +29,8 @@ class ARKNIGHTSGUESS_API ADefaultPlayerController : public APlayerController
 protected:
 	virtual void BeginPlay() override;
 
+	virtual void OnRep_PlayerState() override;
+
 	UFUNCTION()
 	void OnGameStart();
 
@@ -36,6 +39,10 @@ public:
 	// ---- Game-control RPCs ----
 	UFUNCTION(Reliable, Server, BlueprintCallable)
 	void StartGame(const FGameplayTag& Mode);
+
+	/** 玩家登录后上报自己的名字/头像,服务器写入对应 PlayerState(不再在服务器读房主设置)。 */
+	UFUNCTION(Reliable, Server, BlueprintCallable)
+	void Server_SetPlayerInfo(const FString& NewName, const FSoftObjectPath& NewIcon);
 
 
 	UFUNCTION(Reliable, Server, BlueprintCallable)

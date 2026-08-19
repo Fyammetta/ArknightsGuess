@@ -40,6 +40,10 @@ private:
 	
 	UFUNCTION()
 	void OnPlayerJoinedOrLeft(APlayerState* Player, bool bWasJoined);
+
+	/** 任一玩家头像复制到达时刷新列表。 */
+	UFUNCTION()
+	void OnAnyPlayerIconChanged();
 	
 	
 };

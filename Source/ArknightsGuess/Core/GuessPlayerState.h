@@ -10,16 +10,22 @@
 /**
  * 
  */
+
+DECLARE_MULTICAST_DELEGATE(FPlayerIconChangeDelegate);
 UCLASS()
 class ARKNIGHTSGUESS_API AGuessPlayerState : public APlayerState, public IPlayerIconInterface
 {
 	GENERATED_BODY()
 	
 private:
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing="OnRep_PlayerIcon")
 	UTexture2D* PlayerIcon;
 	
 public:	
+	FPlayerIconChangeDelegate OnPlayerIconChangedDelegate;
+	
+	UFUNCTION()
+	void OnRep_PlayerIcon();
 	
 	virtual void BeginPlay() override;
 	
@@ -29,9 +35,12 @@ public:
 	
 	virtual void ChangePlayerIcon(UTexture2D* Icon) override;
 	
-	virtual void CopyProperties(APlayerState* PlayerState) override;
-	
 	virtual void SeamlessTravelTo(class APlayerState* NewPlayerState) override;
 	
-
+	UFUNCTION(Server, Reliable)
+	void InitPlayerState(const FSoftObjectPath& Icon, const FString& Name);
+	
+	void OnLocalPlayerJoined();
+	
+	virtual TMulticastDelegate<void()>* OnPlayerIconChanged() override { return &OnPlayerIconChangedDelegate;};
 };

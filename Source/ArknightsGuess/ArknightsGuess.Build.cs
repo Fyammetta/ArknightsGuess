@@ -29,7 +29,7 @@ public class ArknightsGuess : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] {
 			"DeveloperSettings",
-			"SlateCore",
+			"SlateCore", "ShaderConductor",
 		});
 	}
 }

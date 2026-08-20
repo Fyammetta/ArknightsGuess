@@ -37,9 +37,10 @@ private:
 	bool UpdateSize();
 	
 	float GetDesiredSize() const;
+
 	
 	UFUNCTION()
-	void OnPlayerJoinedOrLeft(APlayerState* Player, bool bWasJoined);
+	void OnPlayerJoinedOrLeft(APlayerState* Player = nullptr, bool bWasJoined = true);
 	
 	
 };

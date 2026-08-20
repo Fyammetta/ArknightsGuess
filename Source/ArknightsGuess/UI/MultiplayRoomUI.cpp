@@ -6,13 +6,17 @@
 #include "ArknightsGuess.h"
 #include "PlayerIconInterface.h"
 #include "SocketSubsystem.h"
+#include "UIManagerSubsystem.h"
 #include "Core/LanDiscoverySubsystem.h"
 #include "Components/TextBlock.h"
 #include "Components/TileView.h"
 #include "Components/WidgetSwitcher.h"
 #include "Core/DefaultGameStateBase.h"
+#include "Core/GuessPlayerState.h"
 #include "GameFramework/GameState.h"
 #include "GameFramework/PlayerState.h"
+#include "Kismet/GameplayStatics.h"
+
 namespace 
 {
 	constexpr float DefaultTileSize = 1200;
@@ -23,18 +27,18 @@ void UMultiplayRoomUI::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-		UWorld* World = GetWorld();
-		if (!World) return;
-	
-		HostCastSwitcher->SetActiveWidgetIndex(GetWorld()->GetNetMode() == NM_ListenServer);
+	UWorld* World = GetWorld();
+	if (!World) return;
 
-		auto GS = World->GetGameState<ADefaultGameStateBase>();
+	HostCastSwitcher->SetActiveWidgetIndex(GetWorld()->GetNetMode() == NM_ListenServer);
+
+	auto GS = World->GetGameState<ADefaultGameStateBase>();
+
+	if (!GS) return;
 	
-		if (!GS) return;
-	
-		if (!GS->PlayerArray.IsEmpty())
-			OnPlayerJoinedOrLeft(World->GetFirstPlayerController()->GetPlayerState<APlayerState>(),true);
-		GS->OnMultiplayerNumChanged.AddUniqueDynamic(this,  &UMultiplayRoomUI::OnPlayerJoinedOrLeft);
+
+	OnPlayerJoinedOrLeft();
+	GS->OnMultiplayerNumChanged.AddUniqueDynamic(this,  &UMultiplayRoomUI::OnPlayerJoinedOrLeft);
 
 	// 方案3:枚举本机全部 IPv4(安卓含热点接口;GetLocalHostAddr 在热点下会拿到移动数据接口,PC 不可达)
 	TArray<FString> DisplayIps = ULanDiscoverySubsystem::GetAllLocalIPv4();
@@ -54,6 +58,8 @@ void UMultiplayRoomUI::NativeConstruct()
 		}
 	}
 	PORT_DisplayText->SetText(FText::FromString(FString::FromInt(World->URL.Port)));
+	
+	
 }
 
 bool UMultiplayRoomUI::UpdateSize()

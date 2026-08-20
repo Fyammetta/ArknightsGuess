@@ -28,4 +28,6 @@ public:
 	virtual void ChangePlayerIcon(UTexture2D* Icon) = 0;
 	
 	virtual void Select(bool bSelected){};
+	
+	virtual TMulticastDelegate<void()>* OnPlayerIconChanged(){ return nullptr; };
 };

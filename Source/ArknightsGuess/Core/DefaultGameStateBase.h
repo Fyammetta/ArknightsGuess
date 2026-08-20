@@ -84,6 +84,8 @@ private:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_BroadcastPlayerNumChange(APlayerState* Player, bool bJoin);
+	
+	void ShowMultiplayerUI();
 };
 
 

@@ -150,6 +150,11 @@ void ADefaultGameStateBase::GenerateGameplayComponent()
 	UE_LOG(LogArknights, Log, TEXT("[DefaultGS] GenerateGameplayComponent | Mode=%s | Component=%s"), *Mode.ToString(), *Class->GetName());
 }
 
+void ADefaultGameStateBase::ShowMultiplayerUI()
+{
+	
+}
+
 void ADefaultGameStateBase::NetMulticast_BroadcastPlayerNumChange_Implementation(APlayerState* Player, bool bJoin)
 {
 	OnMultiplayerNumChanged.Broadcast(Player,bJoin);

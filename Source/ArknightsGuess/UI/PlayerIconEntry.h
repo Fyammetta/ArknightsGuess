@@ -28,8 +28,10 @@ protected:
 	
 	TWeakInterfacePtr<IPlayerIconInterface> Object;
 	
-protected:
 	virtual void NativeOnListItemObjectSet(UObject* ListItemObject) override;
 
 	virtual void NativeOnItemSelectionChanged(bool bIsSelected) override;
+
+private:
+	void OnIconChanged();
 };

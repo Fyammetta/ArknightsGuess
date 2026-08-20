@@ -3,6 +3,7 @@
 
 #include "PlayerIconEntry.h"
 
+#include "ArknightsGuess.h"
 #include "PlayerIconInterface.h"
 #include "Components/Image.h"
 
@@ -17,6 +18,11 @@ void UPlayerIconEntry::NativeOnListItemObjectSet(UObject* ListItemObject)
 
 		Object = Cast<IPlayerIconInterface>(ListItemObject);
 		Icon->SetBrushFromTexture(Object->GetPlayerIcon());
+		if (auto Delegate = Object->OnPlayerIconChanged())
+		{
+			Delegate->AddUObject(this, &UPlayerIconEntry::OnIconChanged);
+			SetVisibility(ESlateVisibility::Hidden);
+		}
 		//Object->SetObjectValid(true);
 	}
 }
@@ -29,4 +35,13 @@ void UPlayerIconEntry::NativeOnItemSelectionChanged(bool bIsSelected)
 	{
 		Object->Select(bIsSelected);
 	}
+}
+
+void UPlayerIconEntry::OnIconChanged()
+{
+	SetVisibility(ESlateVisibility::Visible);
+
+	auto NewIcon = Object->GetPlayerIcon();
+	UE_LOG(LogArknights, Log, TEXT("[UPlayerIconEntry] Change to %s"), *NewIcon->GetPathName() )
+	Icon->SetBrushFromTexture(NewIcon);
 }

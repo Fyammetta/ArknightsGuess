@@ -182,6 +182,9 @@ private:
 	void OnCreateRoomClicked();
 	
 	UFUNCTION()
+	void OnCreateRoomCancled();
+	
+	UFUNCTION()
 	void OnMultiCreateClicked();
 	
 	UFUNCTION()

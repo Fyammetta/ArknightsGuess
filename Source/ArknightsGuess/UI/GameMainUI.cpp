@@ -253,6 +253,12 @@ void UGameMainUI::OnCreateRoomClicked()
 	
 }
 
+void UGameMainUI::OnCreateRoomCancled()
+{
+	PlayAnimationReverse(ShowSettingsWidget);
+	bExpandedSettings = false;
+}
+
 void UGameMainUI::OnMultiCreateClicked()
 {
 	if (!GetWorld()) return;

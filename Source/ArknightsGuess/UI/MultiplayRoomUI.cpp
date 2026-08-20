@@ -7,7 +7,6 @@
 #include "PlayerIconInterface.h"
 #include "SocketSubsystem.h"
 #include "UIManagerSubsystem.h"
-#include "Core/LanDiscoverySubsystem.h"
 #include "Components/TextBlock.h"
 #include "Components/TileView.h"
 #include "Components/WidgetSwitcher.h"
@@ -39,24 +38,15 @@ void UMultiplayRoomUI::NativeConstruct()
 
 	OnPlayerJoinedOrLeft();
 	GS->OnMultiplayerNumChanged.AddUniqueDynamic(this,  &UMultiplayRoomUI::OnPlayerJoinedOrLeft);
-
-	// 方案3:枚举本机全部 IPv4(安卓含热点接口;GetLocalHostAddr 在热点下会拿到移动数据接口,PC 不可达)
-	TArray<FString> DisplayIps = ULanDiscoverySubsystem::GetAllLocalIPv4();
-	if (!DisplayIps.IsEmpty())
+	
+	bool bCanBind = false;
+	TSharedRef<FInternetAddr> LocalIp = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->GetLocalHostAddr(*GLog, bCanBind);
+	
+	if (LocalIp->IsValid())
 	{
-		IP_DisplayText->SetText(FText::FromString(FString::Join(DisplayIps, TEXT("\n"))));
-		UE_LOG(LogArknights, Log, TEXT("[MultiplayRoomUI] Local IPs: %s"), *FString::Join(DisplayIps, TEXT(", ")));
+		IP_DisplayText->SetText(FText::FromString(LocalIp->ToString(false)));
 	}
-	else
-	{
-		// 兜底:退回 GetLocalHostAddr
-		bool bCanBind = false;
-		TSharedRef<FInternetAddr> LocalIp = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->GetLocalHostAddr(*GLog, bCanBind);
-		if (LocalIp->IsValid())
-		{
-			IP_DisplayText->SetText(FText::FromString(LocalIp->ToString(false)));
-		}
-	}
+	
 	PORT_DisplayText->SetText(FText::FromString(FString::FromInt(World->URL.Port)));
 	
 	

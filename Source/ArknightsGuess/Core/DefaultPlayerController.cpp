@@ -126,7 +126,7 @@ void ADefaultPlayerController::PrepareForMultiply(const FString& RoomName, const
 		{
 			auto Map = Settings->ModeLevels[Tag];
 
-			World->SeamlessTravel(Map.LoadSynchronous()->GetMapName(),true);
+			World->ServerTravel(Map.LoadSynchronous()->GetMapName() + TEXT("?listen"),true);
 		}
 	});
 	SessionPtr->AddOnCreateSessionCompleteDelegate_Handle(Delegate);

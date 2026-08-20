@@ -21,7 +21,8 @@ void UPlayerIconEntry::NativeOnListItemObjectSet(UObject* ListItemObject)
 		if (auto Delegate = Object->OnPlayerIconChanged())
 		{
 			Delegate->AddUObject(this, &UPlayerIconEntry::OnIconChanged);
-			SetVisibility(ESlateVisibility::Hidden);
+			if (GetWorld()->GetNetMode() == NM_Client)
+				SetVisibility(ESlateVisibility::Hidden);
 		}
 		//Object->SetObjectValid(true);
 	}

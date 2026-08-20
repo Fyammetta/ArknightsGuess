@@ -46,8 +46,12 @@ void UMultiplayRoomUI::NativeConstruct()
 	{
 		IP_DisplayText->SetText(FText::FromString(LocalIp->ToString(false)));
 	}
-	
-	PORT_DisplayText->SetText(FText::FromString(FString::FromInt(World->URL.Port)));
+	if (auto Driver = World->GetNetDriver())
+	{
+		if (auto Addr = Driver->GetLocalAddr())
+			PORT_DisplayText->SetText(FText::FromString(FString::FromInt(Addr->GetPort())));
+			
+	}
 	
 	
 }

@@ -105,7 +105,14 @@ FReply UGameMainUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const F
 
 	if (!bExpandedSettings || !SettingsBorder) return FReply::Unhandled();
 
-	const FGeometry& Geo = SettingsBorder->GetCachedGeometry();
+	FGeometry Geo{};
+	switch (SubWidgetSwitcher->GetActiveWidgetIndex())
+	{
+		case 0 :	SettingsBorder->GetCachedGeometry();break;
+		case 1 :	CreateRoomBorder->GetCachedGeometry();break;
+		case 2 :	JoinRoomBorder->GetCachedGeometry();break;
+	}
+
 
 	if (!Geo.IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
 	{

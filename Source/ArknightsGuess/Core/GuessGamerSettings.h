@@ -34,7 +34,7 @@ protected:
 	FString PlayerName;
 
 	UPROPERTY(BlueprintReadWrite, Config, Category = "Multiplay")
-	TSoftObjectPtr<UTexture2D> PlayerIcon;
+	TSoftObjectPtr<UTexture2D> PlayerIcon = TSoftObjectPtr<UTexture2D>(FSoftObjectPath("/Game/UserInterfaces/Textures/Icons/头像_能天使.头像_能天使"));
 
 	UPROPERTY(BlueprintReadWrite, Config, Category = "Audio")
 	TMap<FGameplayTag, float> VolumeMapping;

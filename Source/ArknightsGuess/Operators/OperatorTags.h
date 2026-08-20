@@ -39,11 +39,14 @@ namespace UITags
 	ARKNIGHTS_DECLARE_TAG(MainEntry,  "Main.MainEntry")
 	ARKNIGHTS_DECLARE_TAG(Settings,   "Main.Settings")
 	ARKNIGHTS_DECLARE_TAG(GuessGame,  "Game.GuessGame")
+	ARKNIGHTS_DECLARE_TAG(Waiting,  "Main.Waiting")
+	ARKNIGHTS_DECLARE_TAG(MultiRoom,   "Game.Multiplay")
 }
 
 namespace MapTags
 {
 	ARKNIGHTS_DECLARE_TAG(MultiRoom,   "Game.Multiplay")
+	ARKNIGHTS_DECLARE_TAG(Main,   "Game.Multiplay")
 }
 
 #undef ARKNIGHTS_DECLARE_TAG

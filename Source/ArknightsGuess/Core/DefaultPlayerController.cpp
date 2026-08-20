@@ -41,6 +41,16 @@ void ADefaultPlayerController::BeginPlay()
 		Sub->OnGuessGameStart.AddDynamic(this, &ADefaultPlayerController::OnGameStart);
 	}
 	Search = MakeShared<FOnlineSessionSearch>();
+	
+	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface();
+
+	SessionPtr->AddOnFindSessionsCompleteDelegate_Handle(FOnFindSessionsCompleteDelegate::CreateWeakLambda(this,
+		[this](bool){
+			if (auto System = UUIManagerSubsystem::Get(this))
+			{
+				System->HideUI(UITags::Waiting());
+			}
+		}));
 }
 
 void ADefaultPlayerController::OnGameStart()
@@ -53,8 +63,8 @@ void ADefaultPlayerController::OnGameStart()
 	const FGameplayTag Mode = Sub ? Sub->GetGameplayMode() : FGameplayTag();
 	if (Settings && Mode.IsValid() && Settings->ModeLevels.Contains(Mode))
 	{
-		UGameplayStatics::OpenLevelBySoftObjectPtr(this, Settings->ModeLevels[Mode], false);
-
+		if (GetWorld())
+			GetWorld()->ServerTravel(Settings->ModeLevels[Mode].ToSoftObjectPath().GetLongPackageName(),false);
 	}
 }
 
@@ -112,7 +122,7 @@ void ADefaultPlayerController::PrepareForMultiply(const FString& RoomName, const
 	Settings.bShouldAdvertise = true;
 	Settings.bUsesPresence = false;
 	Settings.bAllowJoinInProgress = false;
-	Settings.NumPublicConnections = 15;
+	Settings.NumPublicConnections = 16;
 	
 	Settings.Set(TEXT("RoomName"), RoomName , EOnlineDataAdvertisementType::ViaOnlineService);
 
@@ -126,12 +136,18 @@ void ADefaultPlayerController::PrepareForMultiply(const FString& RoomName, const
 		{
 			auto Map = Settings->ModeLevels[Tag];
 
-			World->ServerTravel(Map.LoadSynchronous()->GetMapName() + TEXT("?listen"),true);
+			World->ServerTravel(Map.ToSoftObjectPath().GetLongPackageName() + TEXT("?listen"),true);
 		}
 	});
 	SessionPtr->AddOnCreateSessionCompleteDelegate_Handle(Delegate);
-	SessionPtr->CreateSession(*Local, FName(RoomName), Settings);
-	//SessionPtr->StartSession(FName(RoomName));
+	// 统一使用 NAME_GameSession，与 JoinSession 及 GameMode::PostLogin 的注册保持一致。
+	// 注册由 GameMode::PostLogin(NAME_GameSession, ...) 统一处理，此处不再重复 RegisterPlayer。
+	SessionPtr->CreateSession(*Local, NAME_GameSession, Settings);
+	if (auto System = UUIManagerSubsystem::Get(this))
+	{
+		System->ShowUI(UITags::Loading());
+	}
+	SessionPtr->StartSession(NAME_GameSession);
 }
 
 void ADefaultPlayerController::JoinServer(const FString& Url)
@@ -160,7 +176,12 @@ void ADefaultPlayerController::JoinServer(const FOnlineSessionSearchResult& Sess
 		UE_LOG(LogArknights, Warning, TEXT("[PC] JoinServer(session): empty connect string, fallback to session id"));
 		Info = Session.GetSessionIdStr();
 	}
-	SessionPtr->JoinSession(1,FName(RoomName),Session);
+	SessionPtr->JoinSession(1,NAME_GameSession,Session);
+	FUniqueNetIdRepl Local = GetLocalPlayer()->GetPreferredUniqueNetId();
+
+	// 与 JoinSession 使用相同的 NAME_GameSession，服务器 PostLogin 也会基于此注册
+	SessionPtr->RegisterPlayer(NAME_GameSession, *Local, false);
+
 	ClientTravel(Info, TRAVEL_Absolute);
 
 }
@@ -179,6 +200,10 @@ bool ADefaultPlayerController::TryFindLocalServer(FOnFindSessionsCompleteDelegat
 	if (!OutHandle.IsValid())
 		OutHandle = SessionPtr->AddOnFindSessionsCompleteDelegate_Handle(Delegate);
 
+	if (auto System = UUIManagerSubsystem::Get(this))
+	{
+		System->ShowUI(UITags::Waiting());
+	}
 	return SessionPtr->FindSessions(*Local, Search.ToSharedRef());
 }
 
@@ -212,7 +237,6 @@ void ADefaultPlayerController::StartGame_Implementation(const FGameplayTag& Mode
 
 	Subsystem->StartUp(Mode);
 }
-
 
 void ADefaultPlayerController::Server_UpdateGameSetting_Implementation(const FGameplayTag& SettingTag, const FString& Value)
 {

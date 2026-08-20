@@ -123,6 +123,12 @@ protected:
 	TObjectPtr<UBorder> SettingsBorder;
 	
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UBorder> CreateRoomBorder;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	TObjectPtr<UBorder> JoinRoomBorder;
+	
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	TObjectPtr<UEditableText> RoomNameInputText;
 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))

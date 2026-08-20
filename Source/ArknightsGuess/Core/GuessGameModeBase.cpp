@@ -6,13 +6,29 @@
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
 #include "ArknightsGuess/Operators/OperatorTypes.h"
 #include "ArknightsGuess.h"
-
+#include "Online.h"
 
 
 void AGuessGameModeBase::PostLogin(APlayerController* NewPlayer)
 {
-	UE_LOG(LogArknights, Log, TEXT("[GM] PostLogin | Player=%s"), NewPlayer ? *NewPlayer->GetName() : TEXT("null"));
 	Super::PostLogin(NewPlayer);
+	UE_LOG(LogArknights, Log, TEXT("[GM] PostLogin | Player=%s"), NewPlayer ? *NewPlayer->GetName() : TEXT("null"));
+
+	if (!NewPlayer)
+		return;
+	
+
+	
+	IOnlineSessionPtr SessionPtr = Online::GetSessionInterface();
+	if (auto Player = NewPlayer->GetLocalPlayer())
+	{
+		auto NetId = NewPlayer->GetLocalPlayer()->GetPreferredUniqueNetId();
+		if (SessionPtr.IsValid() && NetId.IsValid())
+		{
+			SessionPtr->RegisterPlayer(NAME_GameSession, *NetId, false);
+		}
+	}
+
 }
 
 void AGuessGameModeBase::Logout(AController* Exiting)

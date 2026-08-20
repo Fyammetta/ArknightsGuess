@@ -26,7 +26,7 @@ class ARKNIGHTSGUESS_API ADefaultPlayerController : public APlayerController
 	
 protected:
 	virtual void BeginPlay() override;
-
+	
 	UFUNCTION()
 	void OnGameStart();
 

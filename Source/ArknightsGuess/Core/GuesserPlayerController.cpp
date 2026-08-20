@@ -55,10 +55,22 @@ void AGuesserPlayerController::RequestNextRound_Implementation()
 
 void AGuesserPlayerController::EndGame_Implementation()
 {
+	
+	auto Settings = UGuessGameSettings::Get();
+	auto World = GetWorld();
+	if (!Settings || !World || !Settings->ModeLevels.Contains(MapTags::Main())) return;
+	auto Map = Settings->ModeLevels[MapTags::Main()];
+	if (Map.IsNull())
+		return;
+	
+	FString MapName = Map.ToSoftObjectPath().GetLongPackageName();
+
+	
+
 	if (!IsLocalController())
 	{
 		UE_LOG(LogArknights, Log, TEXT("[PC] EndGame from client — returning to local main menu"));
-		ClientTravel(TEXT("/Game/Maps/Map_MainLevel"), TRAVEL_Absolute, false);
+		ClientTravel(MapName, TRAVEL_Relative,true);
 		return;
 	}
 
@@ -69,8 +81,10 @@ void AGuesserPlayerController::EndGame_Implementation()
 	
 	Subsystem->EndGame();
 	GM->EndGame();
+
 	
-	UGameplayStatics::OpenLevelBySoftObjectPtr(this,UGuessGameSettings::Get()->ModeLevels[FGameplayTag()],true, TEXT(""));
+	World->ServerTravel(MapName,true);
+	
 }
 
 void AGuesserPlayerController::OnGameEnd()

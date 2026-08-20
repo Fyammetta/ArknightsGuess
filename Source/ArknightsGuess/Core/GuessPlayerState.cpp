@@ -19,15 +19,6 @@ void AGuessPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
 	UE_LOG(LogArknights, Log, TEXT("[AGuessPlayerState::BeginPlay] NetMode = %d"), GetWorld()->GetNetMode());
-
-	if (!HasAuthority() || PlayerIcon == nullptr)
-	{
-		FString Name = UGuessGamerSettings::GetPlayerName();
-		UTexture2D* Icon =UGuessGamerSettings::GetPlayerIcon();
-		InitPlayerState(Icon->GetPathName(), Name);
-		UE_LOG(LogArknights, Log, TEXT("[AGuessPlayerState::InitPlayerState] Send"));
-	}
-
 	if (!HasAuthority())
 	{
 		if (auto System = UUIManagerSubsystem::Get(this))
@@ -36,6 +27,15 @@ void AGuessPlayerState::BeginPlay()
 		}
 		OnPlayerIconChangedDelegate.AddUObject(this, &AGuessPlayerState::OnLocalPlayerJoined);
 	}
+	if (!HasAuthority() || PlayerIcon == nullptr)
+	{
+		FString Name = UGuessGamerSettings::GetPlayerName();
+		UTexture2D* Icon =UGuessGamerSettings::GetPlayerIcon();
+		InitPlayerState(Icon->GetPathName(), Name);
+		UE_LOG(LogArknights, Log, TEXT("[AGuessPlayerState::InitPlayerState] Send"));
+	}
+
+
 }
 
 void AGuessPlayerState::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -75,6 +75,7 @@ void AGuessPlayerState::OnLocalPlayerJoined()
 {
 	if (auto System =UUIManagerSubsystem::Get(this))
 	{
+		System->HideUI(UITags::Loading());
 		System->ShowUI(MapTags::MultiRoom());
 	}
 	

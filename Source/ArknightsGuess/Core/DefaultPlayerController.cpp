@@ -15,7 +15,6 @@
 #include "Online.h"
 #include "OnlineSessionSettings.h"
 #include "GuessGame/GuessGameSettings.h"
-#include "GuessGamerSettings.h"
 #include "GameFramework/PlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/PlayerIconInterface.h"
@@ -62,56 +61,20 @@ void ADefaultPlayerController::OnGameStart()
 
 void ADefaultPlayerController::InitPlayerState()
 {
-	// 保留旧 PlayerState 的图标(重置/重连场景下迁移)
-	UTexture2D* OldIcon = nullptr;
+	UTexture2D* Icon = nullptr;
 	if (auto* IconInterface = Cast<IPlayerIconInterface>(PlayerState))
 	{
-		OldIcon = IconInterface->GetPlayerIcon();
+		Icon = IconInterface->GetPlayerIcon();
 	}
 
 	Super::InitPlayerState();
 
-	if (OldIcon)
+	if (Icon)
 	{
 		if (auto* IconInterface = Cast<IPlayerIconInterface>(PlayerState))
 		{
-			IconInterface->ChangePlayerIcon(OldIcon);
+			IconInterface->ChangePlayerIcon(Icon);
 		}
-	}
-
-	// 服务器端:本机(房主)的 PlayerState 刚创建且图标为空时,用本机设置初始化
-	if (HasAuthority())
-	{
-		if (auto* PS = GetPlayerState<AGuessPlayerState>())
-		{
-			if (!PS->GetPlayerIcon())
-			{
-				PS->SetPlayerName(UGuessGamerSettings::GetPlayerName());
-				PS->ChangePlayerIcon(UGuessGamerSettings::GetPlayerIcon());
-			}
-		}
-	}
-}
-
-void ADefaultPlayerController::OnRep_PlayerState()
-{
-	Super::OnRep_PlayerState();
-
-	// 客户端:自己的 PlayerState 复制到位后,把本机设置上报给服务器
-	// (服务器 spawn 的 PlayerState 不再读房主设置,头像/名字必须由玩家自己提供)
-	if (!HasAuthority())
-	{
-		UTexture2D* Icon = UGuessGamerSettings::GetPlayerIcon();
-		Server_SetPlayerInfo(UGuessGamerSettings::GetPlayerName(), FSoftObjectPath(Icon));
-	}
-}
-
-void ADefaultPlayerController::Server_SetPlayerInfo_Implementation(const FString& NewName, const FSoftObjectPath& NewIcon)
-{
-	if (auto* PS = GetPlayerState<AGuessPlayerState>())
-	{
-		PS->SetPlayerName(NewName);
-		PS->ChangePlayerIcon(NewIcon);
 	}
 }
 

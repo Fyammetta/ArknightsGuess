@@ -65,9 +65,10 @@ void AGuessGameStateBase::NetMulticast_DisplayNextHint_Implementation()
 
 // ---- Round orchestration ----
 
-void AGuessGameStateBase::NetMulticast_BroadcastOnPlayerReady_Implementation(APlayerController* Player, bool bReady, const FGameplayTag& Message)
+
+void AGuessGameStateBase::NetMulticast_OnPlayerAnswered_Implementation(APlayerState* Player, const FName& Answer)
 {
-	WhenPlayerOnReady.Broadcast(Player, bReady, Message);
+	OnPlayerAnswered.Broadcast(Player, Answer);
 }
 
 void AGuessGameStateBase::EnterNewRound(const FOperatorData& Operator)

@@ -30,6 +30,9 @@ public:
 	UFUNCTION(Reliable, Server, BlueprintCallable)
 	void RequestNextRound();
 	
+	UFUNCTION(Reliable, Server, BlueprintCallable)
+	void CancelPreparedState();
+	
 	
 	UFUNCTION(Reliable, Server, BlueprintCallable)
 	void EndGame();

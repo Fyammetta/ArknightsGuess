@@ -26,7 +26,7 @@ class ARKNIGHTSGUESS_API UGuessHudBase : public UUserWidget
 	
 	bool bMusicSettingsExpanded;
 	
-	bool bPreparedForNext;
+	//bool bPreparedForNext;
 
 protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
@@ -98,8 +98,8 @@ private:
 	UFUNCTION()
 	void TryRetrieveAnswer(const FText& Text);
 
-	UFUNCTION()
-	void OnGuessStateChanged(EGuessRoundState State);
+	/*UFUNCTION()
+	void OnGuessStateChanged(EGuessRoundState State);*/
 	
 	void ConfirmFromList(const FName& Operator);
 

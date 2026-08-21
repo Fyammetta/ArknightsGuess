@@ -1,24 +1,19 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "DefaultPlayerController.h"
-
 #include "GuessGameModeBase.h"
 #include "ArknightsGuess/Operators/OperatorFunctionLibrary.h"
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
-#include "ArknightsGuess/UI/UIManagerSettings.h"
 #include "ArknightsGuess/UI/UIManagerSubsystem.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "ArknightsGuess.h"
-#include "DefaultGameModeBase.h"
 #include "DefaultGameStateBase.h"
 #include "DevNotificationSubsystem.h"
 #include "IPAddress.h"
-#include "SocketSubsystem.h"
 #include "Online.h"
 #include "OnlineSessionSettings.h"
 #include "GuessGame/GuessGameSettings.h"
 #include "GameFramework/PlayerState.h"
-#include "Kismet/GameplayStatics.h"
 #include "UI/PlayerIconInterface.h"
 
 // ============================================================
@@ -152,6 +147,26 @@ void ADefaultPlayerController::PrepareForMultiply(const FString& RoomName, const
 	SessionPtr->StartSession(NAME_GameSession);
 }
 
+void ADefaultPlayerController::QuitServer()
+{
+	auto Settings = UGuessGameSettings::Get();
+	auto World = GetWorld();
+	if (!Settings || !World || !Settings->ModeLevels.Contains(MapTags::Main())) return;
+	auto Map = Settings->ModeLevels[MapTags::Main()];
+	if (Map.IsNull())
+		return;
+	
+	FString MapName = Map.ToSoftObjectPath().GetLongPackageName();
+	if (HasAuthority())
+	{
+		IOnlineSessionPtr SessionPtr = Online::GetSessionInterface();
+		SessionPtr->DestroySession(NAME_GameSession);
+		
+	}
+	JoinServer(MapName);
+
+}
+
 void ADefaultPlayerController::JoinServer(const FString& Url)
 {
 	UE_LOG(LogArknights, Log, TEXT("[PC] JoinServer | Url=%s"), *Url);
@@ -219,6 +234,27 @@ const TArray<FOnlineSessionSearchResult>& ADefaultPlayerController::GetAllSessio
 	return Search->SearchResults;
 }
 
+bool ADefaultPlayerController::IsAllPlayerReady()
+{
+	auto World = GetWorld();
+	if (!World) return false;
+	auto GS = World->GetGameState();
+	auto GM = World->GetAuthGameMode<AGuessGameModeBase>();
+	
+	if (!GS || !GM) return false;
+	return GM->GetReadyPlayerCount() == GS->PlayerArray.Num() - 1;
+}
+
+void ADefaultPlayerController::PreparedForStart_Implementation()
+{
+	auto World = GetWorld();
+	if (!World) return;
+	auto GM = World->GetAuthGameMode<AGuessGameModeBase>();
+	
+	if (!GM) return;
+	GM->SetPlayerPrepared(this);
+}
+
 // ============================================================
 //  Game-control RPCs
 // ============================================================
@@ -238,6 +274,8 @@ void ADefaultPlayerController::StartGame_Implementation(const FGameplayTag& Mode
 	if (!Settings->ModeLevels.Contains(Mode)) { UE_LOG(LogArknights, Warning, TEXT("[PC] StartGame failed: Can't find level to open")); return; }
 
 	Subsystem->StartUp(Mode);
+	if (auto GM = GetWorld() ? GetWorld()->GetAuthGameMode<AGuessGameModeBase>() : nullptr)
+		GM->ResetPreparedPlayers();
 }
 
 void ADefaultPlayerController::Server_UpdateGameSetting_Implementation(const FGameplayTag& SettingTag, const FString& Value)
@@ -266,3 +304,4 @@ void ADefaultPlayerController::Server_UpdateGameSetting_Implementation(const FGa
 	if (auto GS = GetWorld() ? GetWorld()->GetGameState<ADefaultGameStateBase>() : nullptr)
 		GS->NetMulticast_UpdateGameSetting(SettingTag, Value);
 }
+

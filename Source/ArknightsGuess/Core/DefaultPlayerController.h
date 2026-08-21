@@ -43,6 +43,10 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void PrepareForMultiply(const FString& RoomName, const FString& Port);
 
+	
+	UFUNCTION(BlueprintCallable)
+	void QuitServer();
+	
 	UFUNCTION(BlueprintCallable)
 	void JoinServer(const FString& Url);
 	
@@ -51,4 +55,10 @@ public:
 	bool TryFindLocalServer(FOnFindSessionsCompleteDelegate&& Delegate, FDelegateHandle& OutHandle);
 	
 	const TArray<FOnlineSessionSearchResult>& GetAllSessions() const;
+	
+	UFUNCTION(BlueprintCallable)
+	bool IsAllPlayerReady();
+	
+	UFUNCTION(BlueprintCallable, Server, Reliable)
+	void PreparedForStart();
 };

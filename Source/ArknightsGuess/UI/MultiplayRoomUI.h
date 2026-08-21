@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "Blueprint/UserWidget.h"
+#include "StartGameUIBase.h"
 #include "MultiplayRoomUI.generated.h"
 
 class USlider;
@@ -17,18 +17,14 @@ class UWidgetSwitcher;
  * 
  */
 UCLASS()
-class ARKNIGHTSGUESS_API UMultiplayRoomUI : public UUserWidget
+class ARKNIGHTSGUESS_API UMultiplayRoomUI : public UStartGameUIBase
 {
 	GENERATED_BODY()
-	FTimerHandle TimerHandle;
 	int32 Size = 4;
-	bool bShowGameplayLevel = true;
-	FGameplayTag GameMode;
-protected:
-	
 	UPROPERTY(EditDefaultsOnly)
 	TMap<FGameplayTag, FText> GameModeTextMapping;
 	
+protected:
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UWidgetSwitcher* HostCastSwitcher;
 	
@@ -42,49 +38,8 @@ protected:
 	UTextBlock* IP_DisplayText;
 	
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	UImage* SampleImage;
+	UButton* PrepareButton;
 	
-	/// ======================
-	///	======== Host ========
-	/// ======================
-	/// 
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<USlider> LevelSlider;
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<USlider> GuessCountSlider;
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<USlider> ShuffleLimitSlider;
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<USlider> HintFreqSlider;
-	
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<UTextBlock> LevelValueText;
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<UTextBlock> GuessCountValueText;
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<UTextBlock> ShuffleLimitValueText;
-
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	TObjectPtr<UTextBlock> HintFreqValueText;
-	
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	UButton* StartGameButton;
-	
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	UButton* MosaicModeButton;
-	
-	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	UButton* PartModeButton;
-	
-	/// ======================
-	///	======== Cast ========
-	/// ======================
-	/// 
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	UTextBlock* Text_GameMode;
 		
@@ -101,12 +56,31 @@ protected:
 	UTextBlock* Text_GuessCount;
 	
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-	UButton* PrepareButton;
-	
+	UButton* QuitGameButton;
+
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+
+	// Bind shared + Room-specific buttons (base binds Mosaic/Part/Start)
+	virtual void BindButtons() override;
+
+	// ---- Start button (overridden behaviour) ----
+	virtual void OnStartGameClicked() override;
+
+	// ---- Slider callbacks (Host) broadcast to Cast ----
+	virtual void OnLevelSliderChanged(float Value) override;
+	virtual void OnGuessCountSliderChanged(float Value) override;
+	virtual void OnShuffleLimitSliderChanged(float Value) override;
+	virtual void OnHintFreqSliderChanged(float Value) override;
+
+	// ---- Guess mode switching (Host, mirror of UGameMainUI) ----
+	virtual void OnMosaicModeClicked() override;
+	virtual void OnPartModeClicked() override;
 	
+	UFUNCTION()
+	virtual void OnQuitRoomClicked();
+
 private:
 	bool UpdateSize();
 	
@@ -116,23 +90,7 @@ private:
 	UFUNCTION()
 	void OnPlayerJoinedOrLeft(APlayerState* Player = nullptr, bool bWasJoined = true);
 
-	// ---- Slider callbacks (Host) ----
-	UFUNCTION()
-	void OnLevelSliderChanged(float Value);
-
-	UFUNCTION()
-	void OnGuessCountSliderChanged(float Value);
-
-	UFUNCTION()
-	void OnShuffleLimitSliderChanged(float Value);
-
-	UFUNCTION()
-	void OnHintFreqSliderChanged(float Value);
-
-	// ---- Button callbacks (bind only, body left empty) ----
-	UFUNCTION()
-	void OnStartGameClicked();
-
+	// ---- Button callbacks ----
 	UFUNCTION()
 	void OnPrepareClicked();
 
@@ -140,10 +98,6 @@ private:
 	UFUNCTION()
 	void OnGameSettingChanged(FGameplayTag SettingTag, const FString& NewValue);
 
-	void BindSliders();
-	void BindButtons();
-	void RefreshSampleMaterial();
-	void RefreshSampleClarity();
 	void BroadcastSetting(const FGameplayTag& SettingTag, int32 Value);
 	
 };

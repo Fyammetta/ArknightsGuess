@@ -7,7 +7,7 @@
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
 #include "Net/UnrealNetwork.h"
 #include "ArknightsGuess.h"
-#include "GameFramework/PlayerState.h"
+
 
 ADefaultGameStateBase::ADefaultGameStateBase()
 {
@@ -159,10 +159,12 @@ void ADefaultGameStateBase::GenerateGameplayComponent()
 	UE_LOG(LogArknights, Log, TEXT("[DefaultGS] GenerateGameplayComponent | Mode=%s | Component=%s"), *Mode.ToString(), *Class->GetName());
 }
 
-void ADefaultGameStateBase::ShowMultiplayerUI()
+void ADefaultGameStateBase::NetMulticast_BroadcastOnPlayerReady_Implementation(APlayerState* Player, bool bReady)
 {
-	
+	WhenPlayerOnReady.Broadcast(Player, bReady);
 }
+
+
 
 void ADefaultGameStateBase::NetMulticast_BroadcastPlayerNumChange_Implementation(APlayerState* Player, bool bJoin)
 {

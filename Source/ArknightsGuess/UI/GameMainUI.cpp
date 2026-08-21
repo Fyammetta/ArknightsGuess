@@ -31,45 +31,28 @@ void UGameMainUI::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (!GameMode.IsValid())
-	{
-		GameMode = GameModeTags::Mosaic();
-	}
-
-	BindSliders();
-	BindButtons();
-
 	if (PartSelector)
 		PartSelector->OnSelectionChanged.AddUniqueDynamic(this, &UGameMainUI::OnPartSelectionChanged);
+}
 
+void UGameMainUI::BindButtons()
+{
+	Super::BindButtons();
 
-	// Init slider values from rule settings
-	if (auto* RuleSettings = UGuessGameSettings::Get())
-	{
-		LevelSlider->SetValue(static_cast<float>(RuleSettings->DefaultLevel));
-		const float ClarityStep = static_cast<float>(RuleSettings->ClarityPerLevel);
-		LevelSlider->SetStepSize(ClarityStep);
-		LevelValueText->SetText(FText::AsNumber(RuleSettings->DefaultLevel / RuleSettings->ClarityPerLevel));
+#define ONCLICK(Button, Event) \
+	if (Button) \
+		Button->OnClicked.AddUniqueDynamic(this, &UGameMainUI::Event);
 
-		GuessCountSlider->SetValue(static_cast<float>(RuleSettings->MaxGuessCount));
-		GuessCountValueText->SetText(FText::AsNumber(RuleSettings->MaxGuessCount));
-
-		HintFreqSlider->SetValue(static_cast<float>(RuleSettings->HintFrequency));
-		HintFreqValueText->SetText(FText::AsNumber(RuleSettings->HintFrequency));
-
-		float Value = FMath::Min(RuleSettings->ShuffleLimit, ShuffleLimitSlider->GetMaxValue());
-		ShuffleLimitSlider->SetValue(Value);
-		ShuffleLimitValueText->SetText(FText::AsNumber(Value));
-	}
-
-	// Sample image (UI config)
-	if (auto* UISettings = UOperatorUISettings::Get())
-	{
-		if (SampleImage && UISettings->SampleTex.IsValid())
-		{
-			SampleImage->GetDynamicMaterial()->SetTextureParameterValue(TEXT("Tex"), UISettings->SampleTex.LoadSynchronous());
-		}
-	}
+	ONCLICK(SoloPlayButton, OnSoloPlayClicked);
+	ONCLICK(CreateRoomButton, OnCreateRoomClicked);
+	ONCLICK(QuitGameButton, OnQuitGameClicked);
+	ONCLICK(SettingsButton, OnSettingsClicked);
+	ONCLICK(ConfirmCreateRoomButton, OnMultiCreateClicked);
+	ONCLICK(JoinRoomButton, OnJoinRoomClicked);
+	ONCLICK(ConfirmJoinRoomButton, OnMultiJoinClicked);
+	ONCLICK(SearchRoomButton, OnMultiSearchClicked);
+	ONCLICK(CancelRoomButton,OnCreateRoomCanceled);
+#undef ONCLICK
 }
 
 void UGameMainUI::NativeDestruct()
@@ -80,266 +63,6 @@ void UGameMainUI::NativeDestruct()
 	}
 
 	Super::NativeDestruct();
-}
-
-FReply UGameMainUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
-{
-	// ---- Sample image click: toggle gameplay / actual level (Mosaic only) ----
-	if (SampleImage && GameMode == GameModeTags::Mosaic())
-	{
-		const FGeometry& SampleGeo = SampleImage->GetCachedGeometry();
-		if (SampleGeo.IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
-		{
-			bShowGameplayLevel = !bShowGameplayLevel;
-			const int32 Step = UGuessGameSettings::Get()->ClarityPerLevel;
-			LevelSlider->SetStepSize(bShowGameplayLevel ? static_cast<float>(Step) : 1.0f);
-			if (bShowGameplayLevel)
-			{
-				const int32 Rounded = FMath::DivideAndRoundUp(static_cast<int32>(LevelSlider->GetValue()), Step) * Step;
-				LevelSlider->SetValue(static_cast<float>(Rounded));
-			}
-			RefreshSampleClarity();
-			return FReply::Handled();
-		}
-	}
-
-	if (!bExpandedSettings || !SettingsBorder || !CreateRoomBorder || !JoinRoomBorder) return FReply::Unhandled();
-
-	FGeometry Geo{};
-	switch (SubWidgetSwitcher->GetActiveWidgetIndex())
-	{
-		case 0 :	Geo = SettingsBorder->GetCachedGeometry();break;
-		case 1 :	Geo = CreateRoomBorder->GetCachedGeometry();break;
-		case 2 :	Geo = JoinRoomBorder->GetCachedGeometry();break;
-	}
-
-
-	if (!Geo.IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
-	{
-		PlayAnimationReverse(ShowSettingsWidget);
-		bExpandedSettings = false;
-		return FReply::Handled();
-	}
-
-	return FReply::Unhandled();
-}
-
-void UGameMainUI::BindSliders()
-{
-	if (LevelSlider)
-		LevelSlider->OnValueChanged.AddUniqueDynamic(this, &UGameMainUI::OnLevelSliderChanged);
-	if (GuessCountSlider)
-		GuessCountSlider->OnValueChanged.AddUniqueDynamic(this, &UGameMainUI::OnGuessCountSliderChanged);
-	if (ShuffleLimitSlider)
-	{
-		ShuffleLimitSlider->OnValueChanged.AddUniqueDynamic(this, &UGameMainUI::OnShuffleLimitSliderChanged);
-		if (auto Settings = UOperatorUISettings::Get())
-		{
-			int32 Max = 0;
-			Settings->OperatorDatas.LoadSynchronous()->ForeachRow<FOperatorDataRow>(TEXT(""), [&Max](const FName& RowName, const FOperatorDataRow& Row)
-			{
-				Max += Row.SkinTextures.Num();
-			});
-			ShuffleLimitSlider->SetValue(Max);
-		}
-	}
-	if (HintFreqSlider)
-		HintFreqSlider->OnValueChanged.AddUniqueDynamic(this, &UGameMainUI::OnHintFreqSliderChanged);
-}
-
-void UGameMainUI::BindButtons()
-{
-#define ONCLICK(Button,Event)\
-	if (Button)\
-		Button->OnClicked.AddUniqueDynamic(this, &UGameMainUI::Event);
-	ONCLICK(SoloPlayButton,OnSoloPlayClicked);
-	ONCLICK(CreateRoomButton,OnCreateRoomClicked);
-	ONCLICK(MosaicModeButton,OnMosaicModeClicked);
-	ONCLICK(PartModeButton,OnPartModeClicked);
-	ONCLICK(StartGameButton,OnStartGameClicked);
-	ONCLICK(QuitGameButton,OnQuitGameClicked);
-	ONCLICK(SettingsButton,OnSettingsClicked);
-	ONCLICK(ConfirmCreateRoomButton,OnMultiCreateClicked);
-	ONCLICK(JoinRoomButton,OnJoinRoomClicked);
-	ONCLICK(ConfirmJoinRoomButton,OnMultiJoinClicked);
-	ONCLICK(SearchRoomButton,OnMultiSearchClicked);
-	
-
-#undef ONCLICK
-}
-
-void UGameMainUI::ExchangeButtonStyle()
-{
-	auto Style = MosaicModeButton->GetStyle();
-	auto Text = MosaicModeButton->GetColorAndOpacity();
-
-	MosaicModeButton->SetStyle(PartModeButton->GetStyle());
-	PartModeButton->SetStyle(Style);
-
-	MosaicModeButton->SetColorAndOpacity(PartModeButton->GetColorAndOpacity());
-	PartModeButton->SetColorAndOpacity(Text);
-
-	ModeSwitcher->SetActiveWidgetIndex(ModeSwitcher->GetActiveWidgetIndex() == 0 ? 1 : 0);
-
-	RefreshSampleMaterial();
-}
-
-void UGameMainUI::RefreshSampleMaterial()
-{
-	if (auto Settings = UOperatorUISettings::Get())
-	{
-		if (auto Material = Settings->GetMaterial(GameMode))
-		{
-			SampleImage->SetBrushFromMaterial(Material);
-		}
-	}
-}
-
-void UGameMainUI::RefreshSampleClarity()
-{
-	if (!SampleImage || !LevelSlider) return;
-
-	const int32 Step = UGuessGameSettings::Get()->ClarityPerLevel;
-	const int32 RawValue = static_cast<int32>(LevelSlider->GetValue());
-
-	if (bShowGameplayLevel)
-	{
-		// Gameplay level: round up to nearest multiple of ClarityPerLevel
-		const int32 GameplayValue = FMath::DivideAndRoundUp(RawValue, Step) * Step;
-		LevelValueText->SetText(FText::AsNumber(GameplayValue / Step));
-		UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), GameplayValue);
-	}
-	else
-	{
-		// Actual level: pass raw value as-is
-		LevelValueText->SetText(FText::AsNumber(RawValue / Step));
-		UOperatorFunctionLibrary::SetOperatorClarity(SampleImage->GetDynamicMaterial(), RawValue);
-	}
-}
-
-// ---- Slider callbacks ----
-
-void UGameMainUI::OnLevelSliderChanged(float Value)
-{
-	RefreshSampleClarity();
-}
-
-void UGameMainUI::OnGuessCountSliderChanged(float Value)
-{
-	int32 IntVal = Value;
-	GuessCountValueText->SetText(FText::AsNumber(IntVal));
-}
-
-void UGameMainUI::OnShuffleLimitSliderChanged(float Value)
-{
-	int32 IntVal = Value;
-	ShuffleLimitValueText->SetText(FText::AsNumber(IntVal));
-}
-
-void UGameMainUI::OnHintFreqSliderChanged(float Value)
-{
-	int32 IntVal = Value;
-	HintFreqValueText->SetText(FText::AsNumber(IntVal));
-}
-
-// ---- Button callbacks ----
-
-void UGameMainUI::OnSoloPlayClicked()
-{
-	SubWidgetSwitcher->SetActiveWidgetIndex(0);
-	PlayAnimationForward(ShowSettingsWidget);
-	bExpandedSettings = true;
-}
-
-void UGameMainUI::OnCreateRoomClicked()
-{
-	
-	SubWidgetSwitcher->SetActiveWidgetIndex(1);
-	PlayAnimationForward(ShowSettingsWidget);
-	bExpandedSettings = true;
-	
-}
-
-void UGameMainUI::OnCreateRoomCancled()
-{
-	PlayAnimationReverse(ShowSettingsWidget);
-	bExpandedSettings = false;
-}
-
-void UGameMainUI::OnMultiCreateClicked()
-{
-	if (!GetWorld()) return;
-	if (auto PC = GetWorld()->GetFirstPlayerController<ADefaultPlayerController>())
-	{
-		FString RoomName = RoomNameInputText->GetText().ToString();
-		if (RoomName.IsEmpty())
-		{
-			DEV_ONSCREEN_TIPS(TEXT("Room name should not be empty!"));
-			return;
-		}
-		
-		PC->PrepareForMultiply(RoomNameInputText->GetText().ToString(), PortInputText->GetText().ToString());
-	}
-
-
-}
-
-void UGameMainUI::OnMultiSearchClicked()
-{
-	if (!GetWorld()) return;
-	if (auto PC = GetWorld()->GetFirstPlayerController<ADefaultPlayerController>())
-	{
-		FString RoomName = RoomNameInputText->GetText().ToString();
-		if (!PC->TryFindLocalServer(FOnFindSessionsCompleteDelegate::CreateUObject(this,&UGameMainUI::OnLocalServerSearchComplete), SearchHandle))
-		{
-			DEV_ONSCREEN_TIPS(TEXT("Fail to find server!"));
-		}
-	}
-}
-
-void UGameMainUI::OnMultiJoinClicked()
-{
-	if (!GetWorld()) return;
-	if (auto PC = GetWorld()->GetFirstPlayerController<ADefaultPlayerController>())
-	{
-		FString RoomName = RoomNameInputText->GetText().ToString();
-		PC->JoinServer(ServerAddressInputText->GetText().ToString());
-	}
-}
-
-void UGameMainUI::OnMosaicModeClicked()
-{
-	if (GameMode == GameModeTags::Mosaic()) return;
-	GameMode = GameModeTags::Mosaic();
-
-	ExchangeButtonStyle();
-	RefreshSampleClarity();
-
-}
-
-void UGameMainUI::OnPartModeClicked()
-{
-	if (GameMode == GameModeTags::Part()) return;
-	GameMode = GameModeTags::Part();
-
-	ExchangeButtonStyle();
-	FVector Detail = FVector(0,0,1);
-	if (!PartDetails.IsEmpty())
-	{
-		auto Index = PartSelector->GetSelectedIndex();
-		Detail = PartDetails.IsValidIndex(Index) ? PartDetails[Index] : PartDetails[FMath::RandRange(0, PartDetails.Num() - 1)];
-	}
-	UOperatorFunctionLibrary::SetOperatorDisplayPart(SampleImage->GetDynamicMaterial(),Detail);
-
-}
-
-void UGameMainUI::OnPartSelectionChanged(FString SelectedItem, ESelectInfo::Type SelectionType)
-{
-	if (PartDetails.IsEmpty()) return;
-
-	const int32 Index = PartSelector->GetSelectedIndex();
-	const FVector Detail = PartDetails.IsValidIndex(Index) ? PartDetails[Index] : PartDetails[FMath::RandRange(0, PartDetails.Num() - 1)];
-	UOperatorFunctionLibrary::SetOperatorDisplayPart(SampleImage->GetDynamicMaterial(), Detail);
 }
 
 void UGameMainUI::OnStartGameClicked()
@@ -362,6 +85,140 @@ void UGameMainUI::OnStartGameClicked()
 				PC->StartGame(Mode);
 		});
 
+}
+
+void UGameMainUI::OnPartModeClicked()
+{
+	if (GameMode == GameModeTags::Part()) return;
+	GameMode = GameModeTags::Part();
+
+	ExchangeButtonStyle();
+	FVector Detail = FVector(0,0,1);
+	if (!PartDetails.IsEmpty())
+	{
+		auto Index = PartSelector->GetSelectedIndex();
+		Detail = PartDetails.IsValidIndex(Index) ? PartDetails[Index] : PartDetails[FMath::RandRange(0, PartDetails.Num() - 1)];
+	}
+	UOperatorFunctionLibrary::SetOperatorDisplayPart(SampleImage->GetDynamicMaterial(),Detail);
+
+}
+
+FReply UGameMainUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	FReply Result = Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	if (!Result.IsEventHandled())
+	{
+
+		if (!bExpandedSettings || !SettingsBorder) return FReply::Unhandled();
+
+		FGeometry Geo{};
+		switch (SubWidgetSwitcher->GetActiveWidgetIndex())
+		{
+		case 0 :	Geo = SettingsBorder->GetCachedGeometry();break;
+		case 1 :	Geo = CreateRoomBorder->GetCachedGeometry();break;
+		case 2 :	Geo = JoinRoomBorder->GetCachedGeometry();break;
+		}
+
+
+		if (!Geo.IsUnderLocation(InMouseEvent.GetScreenSpacePosition()))
+		{
+			PlayAnimationReverse(ShowSettingsWidget);
+			bExpandedSettings = false;
+			return FReply::Handled();
+		}
+
+		return FReply::Unhandled();
+	}
+	return Result;
+}
+
+void UGameMainUI::OnPartSelectionChanged(FString SelectedItem, ESelectInfo::Type SelectionType)
+{
+	if (PartDetails.IsEmpty()) return;
+
+	const int32 Index = PartSelector->GetSelectedIndex();
+	const FVector Detail = PartDetails.IsValidIndex(Index) ? PartDetails[Index] : PartDetails[FMath::RandRange(0, PartDetails.Num() - 1)];
+	UOperatorFunctionLibrary::SetOperatorDisplayPart(SampleImage->GetDynamicMaterial(), Detail);
+}
+
+void UGameMainUI::OnSoloPlayClicked()
+{
+	SubWidgetSwitcher->SetActiveWidgetIndex(0);
+	PlayAnimationForward(ShowSettingsWidget);
+	bExpandedSettings = true;
+}
+
+void UGameMainUI::OnCreateRoomClicked()
+{
+	
+	SubWidgetSwitcher->SetActiveWidgetIndex(1);
+	PlayAnimationForward(ShowSettingsWidget);
+	bExpandedSettings = true;
+	
+}
+
+void UGameMainUI::OnCreateRoomCanceled()
+{
+	PlayAnimationReverse(ShowSettingsWidget);
+	bExpandedSettings = false;
+}
+
+void UGameMainUI::OnMultiCreateClicked()
+{
+	if (!GetWorld()) return;
+
+	TWeakObjectPtr<ADefaultPlayerController> PC = GetWorld() ? GetWorld()->GetFirstPlayerController<ADefaultPlayerController>() : nullptr;
+	PlayAnimation(ShowSettingsWidget,1,1,EUMGSequencePlayMode::Reverse)->OnSequenceFinishedPlaying().AddWeakLambda(this,
+		[PC, Name = RoomNameInputText->GetText().ToString(), Port = PortInputText->GetText().ToString()](UUMGSequencePlayer&)
+		{
+			if (PC.IsValid())
+			{
+				if (Name.IsEmpty())
+				{
+					UDevNotificationSubsystem::Get(PC.Get())->ShowNotification(TEXT("Room name should not be empty!"));
+					return;
+				}
+		
+				PC->PrepareForMultiply(Name, Port);
+			}
+		});
+	
+
+
+
+}
+
+void UGameMainUI::OnMultiSearchClicked()
+{
+	if (!GetWorld()) return;
+	if (auto PC = GetWorld()->GetFirstPlayerController<ADefaultPlayerController>())
+	{
+		FString RoomName = RoomNameInputText->GetText().ToString();
+		if (!PC->TryFindLocalServer(FOnFindSessionsCompleteDelegate::CreateUObject(this,&UGameMainUI::OnLocalServerSearchComplete), SearchHandle))
+		{
+			DEV_ONSCREEN_TIPS(TEXT("Fail to find server!"));
+		}
+	}
+}
+
+void UGameMainUI::OnMultiJoinClicked()
+{
+	if (!GetWorld()) return;
+	
+	TWeakObjectPtr<ADefaultPlayerController> PC = GetWorld() ? GetWorld()->GetFirstPlayerController<ADefaultPlayerController>() : nullptr;
+	PlayAnimation(ShowSettingsWidget,1,1,EUMGSequencePlayMode::Reverse)->OnSequenceFinishedPlaying().AddWeakLambda(this,
+		[PC, AddrText = ServerAddressInputText->GetText()](UUMGSequencePlayer&)
+		{
+			if (PC.IsValid())
+			{
+				if (AddrText.IsEmpty())
+				{
+					UDevNotificationSubsystem::Get(PC.Get())->ShowNotification(TEXT("You Should Input The Url You Are Joining!"));
+					return;
+				}
+				PC->JoinServer(AddrText.ToString());
+			}
+		});
 }
 
 void UGameMainUI::OnQuitGameClicked()

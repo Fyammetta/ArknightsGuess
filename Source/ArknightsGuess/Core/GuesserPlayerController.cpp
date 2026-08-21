@@ -42,7 +42,7 @@ void AGuesserPlayerController::ConfirmAnswer_Implementation(const FName& Answer)
 	auto GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<AGuessGameModeBase>() : nullptr;
 	if (!GameMode) { UE_LOG(LogArknights, Warning, TEXT("[GuesserPC] ConfirmAnswer failed: no GameMode")); return; }
 
-	GameMode->ProcessGuess(Answer);
+	GameMode->ProcessGuess(this, Answer);
 }
 
 void AGuesserPlayerController::RequestNextRound_Implementation()
@@ -50,8 +50,17 @@ void AGuesserPlayerController::RequestNextRound_Implementation()
 	UE_LOG(LogArknights, Log, TEXT("[GuesserPC] RequestNextRound"));
 	auto GM = GetWorld()->GetAuthGameMode<AGuessGameModeBase>();
 	if (!GM) { UE_LOG(LogArknights, Warning, TEXT("[GuesserPC] RequestNextRound failed: no GameMode")); return; }
-	GM->TryStartNewRound(this);
+	GM->SetPlayerPrepared(this);
 }
+
+void AGuesserPlayerController::CancelPreparedState_Implementation()
+{
+	UE_LOG(LogArknights, Log, TEXT("[GuesserPC] CancelPreparedState"));
+	auto GM = GetWorld()->GetAuthGameMode<AGuessGameModeBase>();
+	if (!GM) { UE_LOG(LogArknights, Warning, TEXT("[GuesserPC] CancelPreparedState failed: no GameMode")); return; }
+	GM->SetPlayerUnprepared(this);
+}
+
 
 void AGuesserPlayerController::EndGame_Implementation()
 {
@@ -92,6 +101,7 @@ void AGuesserPlayerController::OnGameEnd()
 	UE_LOG(LogArknights, Log, TEXT("[DefaultPC] OnGameEnd -> Show Loading"));
 	if (!GetWorld()) { UE_LOG(LogArknights, Warning, TEXT("[DefaultPC] OnGameEnd failed: no World")); return; }
 }
+
 
 void AGuesserPlayerController::OnOperatorDataReady(const FOperatorImage& Tex, const TArray<FString>& Hints)
 {

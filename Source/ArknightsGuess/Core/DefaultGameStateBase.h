@@ -15,7 +15,16 @@ class IUGuessComponentInterface;
  * and the mode-specific gameplay component.
  *
  * AGuessGameStateBase inherits from this and adds RPC / flow-control logic.
- */
+*/
+UENUM()
+enum EPlayerChangeType
+{
+	Join,
+	Leave
+};
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayerCountChangedDelegate, APlayerController*, Player, EPlayerChangeType, Type);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayerOnReadyDelegate, APlayerState*, Player, bool , bReady);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMultiplayerNumChangeDelegate, APlayerState*, State, bool, bJoin);
 UCLASS()
@@ -24,11 +33,16 @@ class ARKNIGHTSGUESS_API ADefaultGameStateBase : public AGameState
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(BlueprintAssignable)
+	FPlayerCountChangedDelegate OnPlayerCountChanged;
+
+	UPROPERTY(BlueprintAssignable)
+	FPlayerOnReadyDelegate WhenPlayerOnReady;
+	
 	ADefaultGameStateBase();
 	
-	UPROPERTY(BlueprintAssignable)
 	FMultiplayerNumChangeDelegate OnMultiplayerNumChanged;
-
+	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	// ---- Game lifecycle RPCs ----
@@ -53,6 +67,7 @@ public:
 	// ---- Mode component (created in BeginPlay from GuessGameSettings) ----
 	TWeakInterfacePtr<IUGuessComponentInterface> GuessComponent;
 
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -62,7 +77,9 @@ public:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_UpdateGameSetting(const FGameplayTag& SettingTag, const FString& Value);
-
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_BroadcastOnPlayerReady(APlayerState* Player, bool bReady);
 protected:
 	UPROPERTY(ReplicatedUsing = "OnRep_OnGuessStateChanged", BlueprintReadOnly)
 	EGuessRoundState RoundState = EGuessRoundState::WaitingForPlayers;
@@ -87,8 +104,8 @@ private:
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_BroadcastPlayerNumChange(APlayerState* Player, bool bJoin);
+
 	
-	void ShowMultiplayerUI();
 };
 
 

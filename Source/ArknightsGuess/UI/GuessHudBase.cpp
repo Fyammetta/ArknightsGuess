@@ -29,7 +29,7 @@ void UGuessHudBase::NativeConstruct()
 
 	if (auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
-		Subsystem->OnGuessRoundStateChanged.AddUniqueDynamic(this, &UGuessHudBase::OnGuessStateChanged);
+		//Subsystem->OnGuessRoundStateChanged.AddUniqueDynamic(this, &UGuessHudBase::OnGuessStateChanged);
 
 		auto Names = Subsystem->GetAllOperatorNames();
 		AllEntries.Reserve(Names.Num());
@@ -49,15 +49,15 @@ void UGuessHudBase::NativeConstruct()
 	AnswerBox->OnTextChanged.AddUniqueDynamic(this, &UGuessHudBase::TryRetrieveAnswer);
 	DisplayAllButton->OnClicked.AddUniqueDynamic(this, &UGuessHudBase::ShowAllOperators);
 	OperatorList->SetVisibility(ESlateVisibility::Collapsed);
-	bPreparedForNext = true;
+	//bPreparedForNext = true;
 }
 
 void UGuessHudBase::NativeDestruct()
 {
-	if (auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
+	/*if (auto Subsystem = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
 	{
 		Subsystem->OnGuessRoundStateChanged.RemoveDynamic(this, &UGuessHudBase::OnGuessStateChanged);
-	}
+	}*/
 
 	Super::NativeDestruct();
 }
@@ -73,11 +73,12 @@ FReply UGuessHudBase::NativeOnMouseButtonDown(const FGeometry& InGeometry, const
 		return FReply::Handled();
 	}
 	
+	/*
 	if (bPreparedForNext)
 	{
 		if (auto PC = GetWorld() ? GetWorld()->GetFirstPlayerController<AGuesserPlayerController>() : nullptr)
 			PC->RequestNextRound();
-	}
+	}*/
 	
 	return FReply::Unhandled();
 }
@@ -196,11 +197,11 @@ void UGuessHudBase::RefreshOperatorList()
 	OperatorList->SetListItems(Matching);
 }
 
-void UGuessHudBase::OnGuessStateChanged(EGuessRoundState State)
+/*void UGuessHudBase::OnGuessStateChanged(EGuessRoundState State)
 {
 	UE_LOG(LogArknights, Log, TEXT("[HUD] OnGuessStateChanged | State=%d"), static_cast<int32>(State));
 	bPreparedForNext = State == EGuessRoundState::Reveal || State == EGuessRoundState::Verify;
-}
+}*/
 
 void UGuessHudBase::ConfirmFromList(const FName& Operator)
 {

@@ -6,7 +6,9 @@
 #include "ArknightsGuess/Operators/OperatorSubsystem.h"
 #include "ArknightsGuess/Operators/OperatorTypes.h"
 #include "ArknightsGuess.h"
+#include "GameFramework/PlayerState.h"
 #include "Online.h"
+#include "Kismet/GameplayStatics.h"
 
 
 void AGuessGameModeBase::PostLogin(APlayerController* NewPlayer)
@@ -37,6 +39,34 @@ void AGuessGameModeBase::Logout(AController* Exiting)
 	Super::Logout(Exiting);
 }
 
+void AGuessGameModeBase::BeginPlay()
+{
+	Super::BeginPlay();
+	if (auto System = UOperatorFunctionLibrary::GetOperatorSubsystem(this))
+	{
+		if (System->IsGameRunning())
+		{
+			if (auto GS = GetGameState<ADefaultGameStateBase>())
+			{
+				GS->WhenPlayerOnReady.AddDynamic(this, &AGuessGameModeBase::OnAllReadyForNextRound);
+			}
+		}
+	}
+}
+
+void AGuessGameModeBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+
+	if (auto GS = GetGameState<ADefaultGameStateBase>())
+	{
+		GS->WhenPlayerOnReady.RemoveAll(this);
+	}
+		
+	
+}
+
 
 void AGuessGameModeBase::EndGame()
 {
@@ -52,33 +82,44 @@ void AGuessGameModeBase::EndGame()
 	}
 
 	SetRoundState(EGuessRoundState::WaitingForPlayers);
+
 }
 
-void AGuessGameModeBase::TryStartNewRound(APlayerController* Player)
+
+void AGuessGameModeBase::SetPlayerPrepared(APlayerController* Player)
 {
-	UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound | Player=%s"), Player ? *Player->GetName() : TEXT("null"));
-	auto* GS = GetGameState<AGuessGameStateBase>();
-	if (!GS || !Player)
+	if (!ReadyPlayers.Contains(Player))
 	{
-		UE_LOG(LogArknights, Warning, TEXT("[GM] TryStartNewRound failed: no GameState or Player"));
-		return;
+		ReadyPlayers.Add(Player);
+		if (auto* GS = GetGameState<ADefaultGameStateBase>())
+			GS->NetMulticast_BroadcastOnPlayerReady(Player->GetPlayerState<APlayerState>(), true);
+
 	}
+}
+
+void AGuessGameModeBase::SetPlayerUnprepared(APlayerController* Player)
+{
 	if (ReadyPlayers.Contains(Player))
 	{
-		UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: Player already ready, waiting for others | Ready=%d/%d"), ReadyPlayers.Num(), GS->PlayerArray.Num());
-		return;
+		ReadyPlayers.Remove(Player);
+		if (auto* GS = GetGameState<ADefaultGameStateBase>())
+			GS->NetMulticast_BroadcastOnPlayerReady(Player->GetPlayerState<APlayerState>(), false);
+
 	}
+}
 
-	ReadyPlayers.Add(Player);
-
-	GS->NetMulticast_BroadcastOnPlayerReady(Player, true, FGameplayTag::EmptyTag);
-	UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: Player ready | Ready=%d/%d"), ReadyPlayers.Num(),GS->PlayerArray.Num());
-	if (ReadyPlayers.Num() >= GS->PlayerArray.Num())
+void AGuessGameModeBase::ResetPreparedPlayers()
+{
+	
+	auto Set = MoveTemp(ReadyPlayers);
+	if (auto* GS = GetGameState<ADefaultGameStateBase>())
 	{
-		UE_LOG(LogArknights, Log, TEXT("[GM] TryStartNewRound: all players ready, starting new round"));
-		ReadyPlayers.Empty();
-		StartNewRound();
+		for (APlayerController* Player : Set)
+		{
+			GS->NetMulticast_BroadcastOnPlayerReady(Player->GetPlayerState<APlayerState>(), false);
+		}
 	}
+
 }
 
 void AGuessGameModeBase::StartNewRound()
@@ -112,7 +153,21 @@ void AGuessGameModeBase::StartNewRound()
 	SetRoundState(EGuessRoundState::Guessing);
 }
 
-void AGuessGameModeBase::ProcessGuess(const FName& OperatorName)
+
+void AGuessGameModeBase::OnAllReadyForNextRound(APlayerState*, bool Ready)
+{
+	if (!Ready) return;
+	if (auto GS = GetGameState<AGameStateBase>())
+	{
+		if (GS->PlayerArray.Num() == GetReadyPlayerCount())
+		{
+			StartNewRound();
+			GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateUObject(this,&AGuessGameModeBase::ResetPreparedPlayers));
+		}
+	}
+}
+
+void AGuessGameModeBase::ProcessGuess(APlayerController* Player, const FName& OperatorName)
 {
 	UE_LOG(LogArknights, Log, TEXT("[GM] ProcessGuess | Answer=%s"), *OperatorName.ToString());
 	AGuessGameStateBase* GS = GetGameState<AGuessGameStateBase>();
@@ -140,6 +195,7 @@ void AGuessGameModeBase::ProcessGuess(const FName& OperatorName)
 		else
 		{
 			GS->Clarify();
+			GS->NetMulticast_OnPlayerAnswered(Player->GetPlayerState<APlayerState>(), OperatorName);
 		}
 	}
 }

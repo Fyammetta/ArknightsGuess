@@ -4,18 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "DefaultGameStateBase.h"
-#include "GameplayTagContainer.h"
 #include "GuessGameStateBase.generated.h"
 
-UENUM()
-enum EPlayerChangeType
-{
-	Join,
-	Leave
-};
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPlayerCountChangedDelegate, APlayerController*, Player, EPlayerChangeType, Type);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerOnReadyDelegate, APlayerController*, Player, bool , bReady, const FGameplayTag&, Message);
 
 
 /**
@@ -23,17 +13,15 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FPlayerOnReadyDelegate, APlayerCo
  *
  * Data properties and accessors live in ADefaultGameStateBase.
  */
+
+DECLARE_MULTICAST_DELEGATE_TwoParams(FPlayerAnsweredDelegate, APlayerState*, const FName&);
 UCLASS()
 class ARKNIGHTSGUESS_API AGuessGameStateBase : public ADefaultGameStateBase
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(BlueprintAssignable)
-	FPlayerCountChangedDelegate OnPlayerCountChanged;
-
-	UPROPERTY(BlueprintAssignable)
-	FPlayerOnReadyDelegate WhenPlayerOnReady;
+	FPlayerAnsweredDelegate OnPlayerAnswered;
 
 	virtual void AddPlayerState(APlayerState* PlayerState) override;
 	
@@ -47,9 +35,9 @@ public:
 
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_DisplayNextHint();
-
+	
 	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_BroadcastOnPlayerReady(APlayerController* Player, bool bReady, const FGameplayTag& Message);
+	void NetMulticast_OnPlayerAnswered(APlayerState* Player,const  FName& Answer);
 	
 	UFUNCTION(NetMulticast, Reliable)
 	void NetMulticast_EndGame();

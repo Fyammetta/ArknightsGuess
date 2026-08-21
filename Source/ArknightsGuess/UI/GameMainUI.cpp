@@ -182,10 +182,6 @@ void UGameMainUI::OnMultiCreateClicked()
 				PC->PrepareForMultiply(Name, Port);
 			}
 		});
-	
-
-
-
 }
 
 void UGameMainUI::OnMultiSearchClicked()

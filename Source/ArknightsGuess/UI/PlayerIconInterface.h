@@ -30,4 +30,6 @@ public:
 	virtual void Select(bool bSelected){};
 	
 	virtual TMulticastDelegate<void()>* OnPlayerIconChanged(){ return nullptr; };
+	
+	virtual bool ShouldShowIcon() { return true; };
 };

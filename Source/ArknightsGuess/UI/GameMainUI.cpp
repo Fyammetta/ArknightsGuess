@@ -103,14 +103,14 @@ FReply UGameMainUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const F
 		}
 	}
 
-	if (!bExpandedSettings || !SettingsBorder) return FReply::Unhandled();
+	if (!bExpandedSettings || !SettingsBorder || !CreateRoomBorder || !JoinRoomBorder) return FReply::Unhandled();
 
 	FGeometry Geo{};
 	switch (SubWidgetSwitcher->GetActiveWidgetIndex())
 	{
-		case 0 :	SettingsBorder->GetCachedGeometry();break;
-		case 1 :	CreateRoomBorder->GetCachedGeometry();break;
-		case 2 :	JoinRoomBorder->GetCachedGeometry();break;
+		case 0 :	Geo = SettingsBorder->GetCachedGeometry();break;
+		case 1 :	Geo = CreateRoomBorder->GetCachedGeometry();break;
+		case 2 :	Geo = JoinRoomBorder->GetCachedGeometry();break;
 	}
 
 

@@ -9,6 +9,8 @@
 #include "ArknightsGuess/UI/UIManagerSubsystem.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "ArknightsGuess.h"
+#include "DefaultGameModeBase.h"
+#include "DefaultGameStateBase.h"
 #include "DevNotificationSubsystem.h"
 #include "IPAddress.h"
 #include "SocketSubsystem.h"
@@ -180,7 +182,7 @@ void ADefaultPlayerController::JoinServer(const FOnlineSessionSearchResult& Sess
 	FUniqueNetIdRepl Local = GetLocalPlayer()->GetPreferredUniqueNetId();
 
 	// 与 JoinSession 使用相同的 NAME_GameSession，服务器 PostLogin 也会基于此注册
-	SessionPtr->RegisterPlayer(NAME_GameSession, *Local, false);
+	//SessionPtr->RegisterPlayer(NAME_GameSession, *Local, false);
 
 	ClientTravel(Info, TRAVEL_Absolute);
 
@@ -261,14 +263,6 @@ void ADefaultPlayerController::Server_UpdateGameSetting_Implementation(const FGa
 		return;
 	}
 
-	NetMulticast_UpdateGameSetting(SettingTag, Value);
-}
-
-void ADefaultPlayerController::NetMulticast_UpdateGameSetting_Implementation(const FGameplayTag& SettingTag, const FString& Value)
-{
-	auto* Sub = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
-	if (!Sub) return;
-
-	const int32 IntValue = FCString::Atoi(*Value);
-	Sub->NetSync_Setting(SettingTag, IntValue);
+	if (auto GS = GetWorld() ? GetWorld()->GetGameState<ADefaultGameStateBase>() : nullptr)
+		GS->NetMulticast_UpdateGameSetting(SettingTag, Value);
 }

@@ -59,6 +59,9 @@ protected:
 public:
 	virtual void AddPlayerState(APlayerState* PlayerState) override;
 	virtual void RemovePlayerState(APlayerState* PlayerState) override;
+	
+	UFUNCTION(NetMulticast, Reliable)
+	void NetMulticast_UpdateGameSetting(const FGameplayTag& SettingTag, const FString& Value);
 
 protected:
 	UPROPERTY(ReplicatedUsing = "OnRep_OnGuessStateChanged", BlueprintReadOnly)

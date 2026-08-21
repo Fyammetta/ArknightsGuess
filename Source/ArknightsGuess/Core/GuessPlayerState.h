@@ -18,6 +18,8 @@ class ARKNIGHTSGUESS_API AGuessPlayerState : public APlayerState, public IPlayer
 	GENERATED_BODY()
 	
 private:
+	bool bHasInitializedByRep = false;
+	
 	UPROPERTY(ReplicatedUsing="OnRep_PlayerIcon")
 	UTexture2D* PlayerIcon;
 	
@@ -43,4 +45,6 @@ public:
 	void OnLocalPlayerJoined();
 	
 	virtual TMulticastDelegate<void()>* OnPlayerIconChanged() override { return &OnPlayerIconChangedDelegate;};
+	
+	virtual bool ShouldShowIcon() override;
 };

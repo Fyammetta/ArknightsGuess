@@ -12,6 +12,7 @@
 
 void AGuessPlayerState::OnRep_PlayerIcon()
 {
+	bHasInitializedByRep = true;
 	OnPlayerIconChangedDelegate.Broadcast();
 }
 
@@ -80,6 +81,14 @@ void AGuessPlayerState::OnLocalPlayerJoined()
 	}
 	
 	OnPlayerIconChangedDelegate.RemoveAll(this);
+}
+
+bool AGuessPlayerState::ShouldShowIcon()
+{
+	if (auto PC = GetPlayerController())
+		return (HasAuthority() == PC->IsLocalController()) || bHasInitializedByRep;
+	
+	return true;
 }
 
 void AGuessPlayerState::InitPlayerState_Implementation(const FSoftObjectPath& Icon, const FString& Name)

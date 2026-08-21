@@ -46,7 +46,7 @@ namespace UITags
 namespace MapTags
 {
 	ARKNIGHTS_DECLARE_TAG(MultiRoom,   "Game.Multiplay")
-	ARKNIGHTS_DECLARE_TAG(Main,   "Game.Multiplay")
+	ARKNIGHTS_DECLARE_TAG(Main,   "Game.Main")
 }
 
 #undef ARKNIGHTS_DECLARE_TAG

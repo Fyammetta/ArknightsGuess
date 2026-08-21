@@ -39,9 +39,6 @@ public:
 
 	UFUNCTION(Reliable, Server, BlueprintCallable)
 	void Server_UpdateGameSetting(const FGameplayTag& SettingTag, const FString& Value);
-
-	UFUNCTION(NetMulticast, Reliable)
-	void NetMulticast_UpdateGameSetting(const FGameplayTag& SettingTag, const FString& Value);
 	
 	UFUNCTION(BlueprintCallable)
 	void PrepareForMultiply(const FString& RoomName, const FString& Port);

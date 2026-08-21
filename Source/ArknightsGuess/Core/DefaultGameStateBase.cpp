@@ -32,6 +32,15 @@ void ADefaultGameStateBase::RemovePlayerState(APlayerState* PlayerState)
 	OnMultiplayerNumChanged.Broadcast(PlayerState, false);
 }
 
+void ADefaultGameStateBase::NetMulticast_UpdateGameSetting_Implementation(const FGameplayTag& SettingTag, const FString& Value)
+{
+	auto* Sub = UOperatorFunctionLibrary::GetOperatorSubsystem(this);
+	if (!Sub) return;
+
+	const int32 IntValue = FCString::Atoi(*Value);
+	Sub->NetSync_Setting(SettingTag, IntValue);
+}
+
 void ADefaultGameStateBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
